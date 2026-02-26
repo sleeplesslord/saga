@@ -29,6 +29,9 @@ var statusCmd = &cobra.Command{
 		if sg.IsSubSaga() {
 			fmt.Printf("Parent: %s\n", sg.ParentID)
 		}
+		if len(sg.Labels) > 0 {
+			fmt.Printf("Labels: %v\n", sg.Labels)
+		}
 		fmt.Printf("Created: %s\n", sg.CreatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Printf("Updated: %s\n", sg.UpdatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Println()

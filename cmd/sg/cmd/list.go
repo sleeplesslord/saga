@@ -14,6 +14,7 @@ var (
 	showAll     bool
 	scopeLocal  bool
 	scopeGlobal bool
+	labelFilter string
 )
 
 var listCmd = &cobra.Command{
@@ -77,7 +78,10 @@ Use flags to filter by scope or show all statuses.`,
 			if !showAll && sg.Status != saga.StatusActive {
 				continue
 			}
-			printSagaWithIndent(sg, 0, showAll, children)
+			if labelFilter != "" && !sg.HasLabel(labelFilter) {
+				continue
+			}
+			printSagaWithIndent(sg, 0, showAll, children, labelFilter)
 		}
 
 		return nil
@@ -86,7 +90,7 @@ Use flags to filter by scope or show all statuses.`,
 
 const maxDisplayDepth = 50
 
-func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga) {
+func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string) {
 	if indent > maxDisplayDepth {
 		fmt.Printf("%-6s %s[Max depth reached]\n", sg.ID, strings.Repeat("  ", indent))
 		return
@@ -97,19 +101,28 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		title = title[:17] + "..."
 	}
 
+	// Build label string
+	labelStr := ""
+	if len(sg.Labels) > 0 {
+		labelStr = fmt.Sprintf(" [%s]", strings.Join(sg.Labels, ", "))
+	}
+
 	indentStr := ""
 	if indent > 0 {
 		indentStr = strings.Repeat("  ", indent) + "↳ "
 	}
 
 	updated := sg.UpdatedAt.Format("Jan 02 15:04")
-	fmt.Printf("%-6s %s%-18s %-10s %s\n", sg.ID, indentStr, title, sg.Status, updated)
+	fmt.Printf("%-6s %s%-18s %-10s %s%s\n", sg.ID, indentStr, title, sg.Status, updated, labelStr)
 
 	for _, child := range children[sg.ID] {
 		if !showAll && child.Status != saga.StatusActive {
 			continue
 		}
-		printSagaWithIndent(child, indent+1, showAll, children)
+		if labelFilter != "" && !child.HasLabel(labelFilter) {
+			continue
+		}
+		printSagaWithIndent(child, indent+1, showAll, children, labelFilter)
 	}
 }
 
@@ -117,5 +130,6 @@ func init() {
 	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all sagas including done")
 	listCmd.Flags().BoolVarP(&scopeLocal, "local", "l", false, "Show only project sagas")
 	listCmd.Flags().BoolVarP(&scopeGlobal, "global", "g", false, "Show only global sagas")
+	listCmd.Flags().StringVar(&labelFilter, "label", "", "Filter by label")
 	rootCmd.AddCommand(listCmd)
 }

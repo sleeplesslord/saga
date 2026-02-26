@@ -8,16 +8,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var parentID string
+var (
+	parentID string
+	labels   []string
+)
 
 var newCmd = &cobra.Command{
 	Use:   "new <title>",
 	Short: "Create a new saga",
-	Long: `Create a new saga. Use --parent to create a sub-saga under an existing saga.
+	Long: `Create a new saga. Use --parent to create a sub-saga, --label to add labels.
 
 Examples:
   sg new "Implement auth"
-  sg new "Add OAuth" --parent abc123`,
+  sg new "Add OAuth" --parent abc123
+  sg new "Fix bug" --label bug --label urgent`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		title := args[0]
@@ -46,6 +50,14 @@ Examples:
 			fmt.Printf("Created saga %s: %s\n", sg.ID, sg.Title)
 		}
 
+		// Add labels
+		for _, label := range labels {
+			sg.AddLabel(label)
+		}
+		if len(labels) > 0 {
+			fmt.Printf("Labels: %v\n", labels)
+		}
+
 		if err := st.Save(sg); err != nil {
 			return fmt.Errorf("saving saga: %w", err)
 		}
@@ -56,5 +68,6 @@ Examples:
 
 func init() {
 	newCmd.Flags().StringVar(&parentID, "parent", "", "Parent saga ID (creates sub-saga)")
+	newCmd.Flags().StringArrayVar(&labels, "label", nil, "Add label (can specify multiple)")
 	rootCmd.AddCommand(newCmd)
 }

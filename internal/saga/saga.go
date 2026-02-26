@@ -15,10 +15,11 @@ const (
 
 // Saga represents a task or project
 type Saga struct {
-	ID       string `json:"id"`
-	ParentID string `json:"parent_id,omitempty"`
-	Title    string `json:"title"`
-	Status   Status `json:"status"`
+	ID       string   `json:"id"`
+	ParentID string   `json:"parent_id,omitempty"`
+	Title    string   `json:"title"`
+	Status   Status   `json:"status"`
+	Labels   []string `json:"labels,omitempty"`
 	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -62,6 +63,36 @@ func NewSubSaga(title string, parentID string) *Saga {
 // IsSubSaga returns true if this saga has a parent
 func (s *Saga) IsSubSaga() bool {
 	return s.ParentID != ""
+}
+
+// HasLabel returns true if saga has the given label
+func (s *Saga) HasLabel(label string) bool {
+	for _, l := range s.Labels {
+		if l == label {
+			return true
+		}
+	}
+	return false
+}
+
+// AddLabel adds a label to the saga if not already present
+func (s *Saga) AddLabel(label string) {
+	if s.HasLabel(label) {
+		return
+	}
+	s.Labels = append(s.Labels, label)
+	s.UpdatedAt = time.Now()
+}
+
+// RemoveLabel removes a label from the saga
+func (s *Saga) RemoveLabel(label string) {
+	for i, l := range s.Labels {
+		if l == label {
+			s.Labels = append(s.Labels[:i], s.Labels[i+1:]...)
+			s.UpdatedAt = time.Now()
+			return
+		}
+	}
 }
 
 // AddHistory adds a new entry to the saga's history
