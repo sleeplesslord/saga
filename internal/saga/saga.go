@@ -15,9 +15,11 @@ const (
 
 // Saga represents a task or project
 type Saga struct {
-	ID        string         `json:"id"`
-	Title     string         `json:"title"`
-	Status    Status         `json:"status"`
+	ID       string `json:"id"`
+	ParentID string `json:"parent_id,omitempty"`
+	Title    string `json:"title"`
+	Status   Status `json:"status"`
+	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	History   []HistoryEntry `json:"history"`
@@ -47,6 +49,19 @@ func NewSaga(title string) *Saga {
 			},
 		},
 	}
+}
+
+// NewSubSaga creates a new saga as a child of parentID
+func NewSubSaga(title string, parentID string) *Saga {
+	sg := NewSaga(title)
+	sg.ParentID = parentID
+	sg.History[0].Note = "Sub-saga created"
+	return sg
+}
+
+// IsSubSaga returns true if this saga has a parent
+func (s *Saga) IsSubSaga() bool {
+	return s.ParentID != ""
 }
 
 // AddHistory adds a new entry to the saga's history

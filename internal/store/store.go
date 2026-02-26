@@ -320,3 +320,36 @@ func (s *Store) GetByID(id string) (*saga.Saga, error) {
 
 	return nil, fmt.Errorf("saga not found: %s", id)
 }
+
+// GetChildren returns all direct children of a saga
+func (s *Store) GetChildren(parentID string) ([]*saga.Saga, error) {
+	sagas, err := s.LoadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	var children []*saga.Saga
+	for _, sg := range sagas {
+		if sg.ParentID == parentID {
+			children = append(children, sg)
+		}
+	}
+
+	return children, nil
+}
+
+// HasActiveChildren returns true if saga has any children that aren't done
+func (s *Store) HasActiveChildren(parentID string) (bool, error) {
+	children, err := s.GetChildren(parentID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, child := range children {
+		if child.Status != saga.StatusDone {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
