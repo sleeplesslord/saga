@@ -376,3 +376,56 @@ func (s *Store) GetNextChildID(parentID string) (string, error) {
 
 	return fmt.Sprintf("%s.%d", parentID, maxNum+1), nil
 }
+
+// HasIncompleteDependencies returns true if any dependency is not done
+func (s *Store) HasIncompleteDependencies(sagaID string) (bool, []string, error) {
+	sg, err := s.GetByID(sagaID)
+	if err != nil {
+		return false, nil, err
+	}
+
+	var incomplete []string
+	for _, depID := range sg.DependsOn {
+		dep, err := s.GetByID(depID)
+		if err != nil {
+			// Dependency not found - treat as incomplete
+			incomplete = append(incomplete, depID)
+			continue
+		}
+		if dep.Status != saga.StatusDone {
+			incomplete = append(incomplete, depID)
+		}
+	}
+
+	return len(incomplete) > 0, incomplete, nil
+}
+
+// WouldCreateCircularDependency checks if adding a dependency would create a cycle
+func (s *Store) WouldCreateCircularDependency(sagaID string, targetID string) (bool, error) {
+	// Check if target depends on saga (directly or transitively)
+	visited := make(map[string]bool)
+	var check func(string) (bool, error)
+	check = func(id string) (bool, error) {
+		if id == sagaID {
+			return true, nil
+		}
+		if visited[id] {
+			return false, nil
+		}
+		visited[id] = true
+
+		sg, err := s.GetByID(id)
+		if err != nil {
+			return false, nil // Orphan dependency
+		}
+
+		for _, depID := range sg.DependsOn {
+			if circular, err := check(depID); err != nil || circular {
+				return circular, err
+			}
+		}
+		return false, nil
+	}
+
+	return check(targetID)
+}

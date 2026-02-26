@@ -24,12 +24,14 @@ const (
 
 // Saga represents a task or project
 type Saga struct {
-	ID       string   `json:"id"`
-	ParentID string   `json:"parent_id,omitempty"`
-	Title    string   `json:"title"`
-	Status   Status   `json:"status"`
-	Priority Priority `json:"priority,omitempty"`
-	Labels   []string `json:"labels,omitempty"`
+	ID           string   `json:"id"`
+	ParentID     string   `json:"parent_id,omitempty"`
+	Title        string   `json:"title"`
+	Status       Status   `json:"status"`
+	Priority     Priority `json:"priority,omitempty"`
+	Labels       []string `json:"labels,omitempty"`
+	DependsOn    []string `json:"depends_on,omitempty"`    // Hard dependencies (blocking)
+	RelatedTo    []string `json:"related_to,omitempty"`    // Soft relationships (informational)
 	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -126,6 +128,70 @@ func (s *Saga) SetPriority(priority Priority) {
 	oldPriority := s.Priority
 	s.Priority = priority
 	s.AddHistory("priority_changed", string(oldPriority)+" -> "+string(priority))
+}
+
+// AddDependency adds a hard dependency (blocks completion until target is done)
+func (s *Saga) AddDependency(targetID string) {
+	for _, id := range s.DependsOn {
+		if id == targetID {
+			return
+		}
+	}
+	s.DependsOn = append(s.DependsOn, targetID)
+	s.UpdatedAt = time.Now()
+}
+
+// RemoveDependency removes a hard dependency
+func (s *Saga) RemoveDependency(targetID string) {
+	for i, id := range s.DependsOn {
+		if id == targetID {
+			s.DependsOn = append(s.DependsOn[:i], s.DependsOn[i+1:]...)
+			s.UpdatedAt = time.Now()
+			return
+		}
+	}
+}
+
+// HasDependency returns true if saga depends on target
+func (s *Saga) HasDependency(targetID string) bool {
+	for _, id := range s.DependsOn {
+		if id == targetID {
+			return true
+		}
+	}
+	return false
+}
+
+// AddRelationship adds a soft relationship (informational only)
+func (s *Saga) AddRelationship(targetID string) {
+	for _, id := range s.RelatedTo {
+		if id == targetID {
+			return
+		}
+	}
+	s.RelatedTo = append(s.RelatedTo, targetID)
+	s.UpdatedAt = time.Now()
+}
+
+// RemoveRelationship removes a soft relationship
+func (s *Saga) RemoveRelationship(targetID string) {
+	for i, id := range s.RelatedTo {
+		if id == targetID {
+			s.RelatedTo = append(s.RelatedTo[:i], s.RelatedTo[i+1:]...)
+			s.UpdatedAt = time.Now()
+			return
+		}
+	}
+}
+
+// HasRelationship returns true if saga is related to target
+func (s *Saga) HasRelationship(targetID string) bool {
+	for _, id := range s.RelatedTo {
+		if id == targetID {
+			return true
+		}
+	}
+	return false
 }
 
 // AddHistory adds a new entry to the saga's history

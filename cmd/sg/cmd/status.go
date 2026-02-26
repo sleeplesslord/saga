@@ -36,6 +36,12 @@ var statusCmd = &cobra.Command{
 		if len(sg.Labels) > 0 {
 			fmt.Printf("Labels: %v\n", sg.Labels)
 		}
+		if len(sg.DependsOn) > 0 {
+			fmt.Printf("Depends on: %v\n", sg.DependsOn)
+		}
+		if len(sg.RelatedTo) > 0 {
+			fmt.Printf("Related to: %v\n", sg.RelatedTo)
+		}
 		fmt.Printf("Created: %s\n", sg.CreatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Printf("Updated: %s\n", sg.UpdatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Println()

@@ -38,6 +38,15 @@ Use --force to override this check.`,
 			return fmt.Errorf("cannot mark saga %s as done: has active sub-sagas. Use --force to override", id)
 		}
 
+		// Check for incomplete dependencies
+		hasIncompleteDeps, incompleteDeps, err := st.HasIncompleteDependencies(id)
+		if err != nil {
+			return fmt.Errorf("checking dependencies: %w", err)
+		}
+		if hasIncompleteDeps && !force {
+			return fmt.Errorf("cannot mark saga %s as done: incomplete dependencies %v. Use --force to override", id, incompleteDeps)
+		}
+
 		sg.SetStatus(saga.StatusDone)
 
 		if err := st.Update(sg); err != nil {
