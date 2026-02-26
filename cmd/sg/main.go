@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/hbn/saga/internal/saga"
 	"github.com/hbn/saga/internal/store"
@@ -35,6 +36,8 @@ func main() {
 		handleDone(st, os.Args[2:])
 	case "continue":
 		handleContinue(st, os.Args[2:])
+	case "sub":
+		handleSub(st, os.Args[2:])
 	case "init":
 		handleInit(st, os.Args[2:])
 	case "help", "--help", "-h":
@@ -116,18 +119,46 @@ func handleList(st *store.Store, args []string) {
 	fmt.Printf("%-6s %-20s %-10s %s\n", "ID", "Title", "Status", "Updated")
 	fmt.Println("-------------------------------------------")
 
+	// Build parent lookup
+	children := make(map[string][]*saga.Saga)
 	for _, sg := range sagas {
+		if sg.ParentID != "" {
+			children[sg.ParentID] = append(children[sg.ParentID], sg)
+		}
+	}
+
+	// Print root sagas (no parent) and their children recursively
+	for _, sg := range sagas {
+		if sg.ParentID != "" {
+			continue // Skip children, they'll be printed with parent
+		}
 		if !showAll && sg.Status != saga.StatusActive {
 			continue
 		}
+		printSagaWithIndent(sg, 0, showAll, children)
+	}
+}
 
-		title := sg.Title
-		if len(title) > 20 {
-			title = title[:17] + "..."
+func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga) {
+	title := sg.Title
+	if len(title) > 20 {
+		title = title[:17] + "..."
+	}
+
+	indentStr := ""
+	if indent > 0 {
+		indentStr = strings.Repeat("  ", indent) + "↳ "
+	}
+
+	updated := sg.UpdatedAt.Format("Jan 02 15:04")
+	fmt.Printf("%-6s %s%-18s %-10s %s\n", sg.ID, indentStr, title, sg.Status, updated)
+
+	// Print children
+	for _, child := range children[sg.ID] {
+		if !showAll && child.Status != saga.StatusActive {
+			continue
 		}
-
-		updated := sg.UpdatedAt.Format("Jan 02 15:04")
-		fmt.Printf("%-6s %-20s %-10s %s\n", sg.ID, title, sg.Status, updated)
+		printSagaWithIndent(child, indent+1, showAll, children)
 	}
 }
 
@@ -179,6 +210,18 @@ func handleDone(st *store.Store, args []string) {
 		os.Exit(1)
 	}
 
+	// Check for active children
+	hasActiveChildren, err := st.HasActiveChildren(id)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error checking children: %v\n", err)
+		os.Exit(1)
+	}
+	if hasActiveChildren {
+		fmt.Fprintf(os.Stderr, "Cannot mark saga %s as done: has active sub-sagas\n", id)
+		fmt.Fprintf(os.Stderr, "Complete sub-sagas first or use --force\n")
+		os.Exit(1)
+	}
+
 	sg.SetStatus(saga.StatusDone)
 
 	if err := st.Update(sg); err != nil {
@@ -226,6 +269,38 @@ func handleContinue(st *store.Store, args []string) {
 	fmt.Printf("Status: %s\n", sg.Status)
 }
 
+func handleSub(st *store.Store, args []string) {
+	if len(args) < 2 {
+		fmt.Fprintln(os.Stderr, "Usage: sg sub <parent-id> <title>")
+		os.Exit(1)
+	}
+
+	parentID := args[0]
+	title := args[1]
+
+	// Verify parent exists
+	parent, err := st.GetByID(parentID)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if parent.Status == saga.StatusDone {
+		fmt.Fprintf(os.Stderr, "Cannot add sub-saga to done saga %s\n", parentID)
+		os.Exit(1)
+	}
+
+	// Create sub-saga
+	sg := saga.NewSubSaga(title, parentID)
+
+	if err := st.Save(sg); err != nil {
+		fmt.Fprintf(os.Stderr, "Error saving sub-saga: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Created sub-saga %s under %s: %s\n", sg.ID, parentID, sg.Title)
+}
+
 func printHelp() {
 	help := `Saga - Task management for agent workflows
 
@@ -234,6 +309,7 @@ Usage: sg <command> [args]
 Commands:
   init                 Initialize local saga storage (.saga/)
   new <title>          Create a new saga
+  sub <parent> <title> Create a sub-saga
   list [flags]         List sagas (default: active only)
   status <id>          Show saga details and history
   done <id>            Mark saga as complete
@@ -248,6 +324,7 @@ List flags:
 Examples:
   sg init
   sg new "Implement auth system"
+  sg sub abc123 "Add OAuth provider"
   sg list              # Shows global + project (if in project)
   sg list --local      # Shows only project sagas
   sg list --global     # Shows only global sagas
