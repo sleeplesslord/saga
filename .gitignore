@@ -1,9 +1,6 @@
 # Binary
 sg
 
-# Local saga data (keep local)
-.saga/
-
 # Go
 *.exe
 *.exe~
