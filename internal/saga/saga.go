@@ -24,14 +24,15 @@ const (
 
 // Saga represents a task or project
 type Saga struct {
-	ID           string   `json:"id"`
-	ParentID     string   `json:"parent_id,omitempty"`
-	Title        string   `json:"title"`
-	Status       Status   `json:"status"`
-	Priority     Priority `json:"priority,omitempty"`
-	Labels       []string `json:"labels,omitempty"`
-	DependsOn    []string `json:"depends_on,omitempty"`    // Hard dependencies (blocking)
-	RelatedTo    []string `json:"related_to,omitempty"`    // Soft relationships (informational)
+	ID          string   `json:"id"`
+	ParentID    string   `json:"parent_id,omitempty"`
+	Title       string   `json:"title"`
+	Description string   `json:"description,omitempty"`
+	Status      Status   `json:"status"`
+	Priority    Priority `json:"priority,omitempty"`
+	Labels      []string `json:"labels,omitempty"`
+	DependsOn   []string `json:"depends_on,omitempty"` // Hard dependencies (blocking)
+	RelatedTo   []string `json:"related_to,omitempty"` // Soft relationships (informational)
 	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -73,6 +74,7 @@ func NewSubSaga(title string, id string, parentID string) *Saga {
 		ParentID:  parentID,
 		Title:     title,
 		Status:    StatusActive,
+		Priority:  PriorityNormal,
 		CreatedAt: now,
 		UpdatedAt: now,
 		History: []HistoryEntry{

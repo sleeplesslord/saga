@@ -27,6 +27,9 @@ var statusCmd = &cobra.Command{
 
 		fmt.Printf("Saga: %s (%s)\n", sg.ID, sg.Status)
 		fmt.Printf("Title: %s\n", sg.Title)
+		if sg.Description != "" {
+			fmt.Printf("Description: %s\n", sg.Description)
+		}
 		if sg.IsSubSaga() {
 			fmt.Printf("Parent: %s\n", sg.ParentID)
 		}

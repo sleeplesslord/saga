@@ -9,9 +9,10 @@ import (
 )
 
 var (
-	parentID string
-	labels   []string
-	priority string
+	parentID    string
+	labels      []string
+	priority    string
+	description string
 )
 
 var newCmd = &cobra.Command{
@@ -23,7 +24,8 @@ Examples:
   sg new "Implement auth"
   sg new "Add OAuth" --parent abc123
   sg new "Fix bug" --label bug --label urgent
-  sg new "Critical fix" --priority high`,
+  sg new "Critical fix" --priority high
+  sg new "Refactor" --desc "Clean up the auth module"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		title := args[0]
@@ -79,6 +81,11 @@ Examples:
 			fmt.Printf("Priority: %s\n", sg.Priority)
 		}
 
+		// Set description if specified
+		if description != "" {
+			sg.Description = description
+		}
+
 		if err := st.Save(sg); err != nil {
 			return fmt.Errorf("saving saga: %w", err)
 		}
@@ -91,5 +98,6 @@ func init() {
 	newCmd.Flags().StringVar(&parentID, "parent", "", "Parent saga ID (creates sub-saga)")
 	newCmd.Flags().StringArrayVar(&labels, "label", nil, "Add label (can specify multiple)")
 	newCmd.Flags().StringVar(&priority, "priority", "", "Set priority (high, normal, low)")
+	newCmd.Flags().StringVar(&description, "desc", "", "Add description")
 	rootCmd.AddCommand(newCmd)
 }
