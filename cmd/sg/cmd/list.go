@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/hbn/saga/internal/saga"
@@ -53,6 +54,20 @@ Use flags to filter by scope or show all statuses.`,
 			fmt.Println("No sagas found.")
 			return nil
 		}
+
+		// Sort by priority (high > normal > low), then by updated time
+		sort.Slice(sagas, func(i, j int) bool {
+			priorityOrder := map[saga.Priority]int{
+				saga.PriorityHigh:   0,
+				saga.PriorityNormal: 1,
+				saga.PriorityLow:    2,
+			}
+			pi, pj := priorityOrder[sagas[i].Priority], priorityOrder[sagas[j].Priority]
+			if pi != pj {
+				return pi < pj
+			}
+			return sagas[i].UpdatedAt.After(sagas[j].UpdatedAt)
+		})
 
 		// Show scope info
 		if st.HasLocal() && !scopeLocal && !scopeGlobal {

@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/hbn/saga/internal/saga"
 	"github.com/hbn/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -28,6 +29,9 @@ var statusCmd = &cobra.Command{
 		fmt.Printf("Title: %s\n", sg.Title)
 		if sg.IsSubSaga() {
 			fmt.Printf("Parent: %s\n", sg.ParentID)
+		}
+		if sg.Priority != saga.PriorityNormal {
+			fmt.Printf("Priority: %s\n", sg.Priority)
 		}
 		if len(sg.Labels) > 0 {
 			fmt.Printf("Labels: %v\n", sg.Labels)

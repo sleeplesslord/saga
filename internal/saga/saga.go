@@ -13,12 +13,22 @@ const (
 	StatusDone   Status = "done"
 )
 
+// Priority represents the priority level of a saga
+type Priority string
+
+const (
+	PriorityHigh   Priority = "high"
+	PriorityNormal Priority = "normal"
+	PriorityLow    Priority = "low"
+)
+
 // Saga represents a task or project
 type Saga struct {
 	ID       string   `json:"id"`
 	ParentID string   `json:"parent_id,omitempty"`
 	Title    string   `json:"title"`
 	Status   Status   `json:"status"`
+	Priority Priority `json:"priority,omitempty"`
 	Labels   []string `json:"labels,omitempty"`
 	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
@@ -40,6 +50,7 @@ func NewSaga(title string) *Saga {
 		ID:        generateID(),
 		Title:     title,
 		Status:    StatusActive,
+		Priority:  PriorityNormal,
 		CreatedAt: now,
 		UpdatedAt: now,
 		History: []HistoryEntry{
@@ -105,6 +116,16 @@ func (s *Saga) RemoveLabel(label string) {
 			return
 		}
 	}
+}
+
+// SetPriority changes the saga priority and logs it
+func (s *Saga) SetPriority(priority Priority) {
+	if s.Priority == priority {
+		return
+	}
+	oldPriority := s.Priority
+	s.Priority = priority
+	s.AddHistory("priority_changed", string(oldPriority)+" -> "+string(priority))
 }
 
 // AddHistory adds a new entry to the saga's history

@@ -11,6 +11,7 @@ import (
 var (
 	parentID string
 	labels   []string
+	priority string
 )
 
 var newCmd = &cobra.Command{
@@ -21,7 +22,8 @@ var newCmd = &cobra.Command{
 Examples:
   sg new "Implement auth"
   sg new "Add OAuth" --parent abc123
-  sg new "Fix bug" --label bug --label urgent`,
+  sg new "Fix bug" --label bug --label urgent
+  sg new "Critical fix" --priority high`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		title := args[0]
@@ -64,6 +66,19 @@ Examples:
 			fmt.Printf("Labels: %v\n", labels)
 		}
 
+		// Set priority if specified
+		if priority != "" {
+			switch priority {
+			case "high":
+				sg.SetPriority(saga.PriorityHigh)
+			case "low":
+				sg.SetPriority(saga.PriorityLow)
+			default:
+				// normal is default, nothing to do
+			}
+			fmt.Printf("Priority: %s\n", sg.Priority)
+		}
+
 		if err := st.Save(sg); err != nil {
 			return fmt.Errorf("saving saga: %w", err)
 		}
@@ -75,5 +90,6 @@ Examples:
 func init() {
 	newCmd.Flags().StringVar(&parentID, "parent", "", "Parent saga ID (creates sub-saga)")
 	newCmd.Flags().StringArrayVar(&labels, "label", nil, "Add label (can specify multiple)")
+	newCmd.Flags().StringVar(&priority, "priority", "", "Set priority (high, normal, low)")
 	rootCmd.AddCommand(newCmd)
 }
