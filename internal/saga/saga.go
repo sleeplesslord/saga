@@ -24,15 +24,17 @@ const (
 
 // Saga represents a task or project
 type Saga struct {
-	ID          string   `json:"id"`
-	ParentID    string   `json:"parent_id,omitempty"`
-	Title       string   `json:"title"`
-	Description string   `json:"description,omitempty"`
-	Status      Status   `json:"status"`
-	Priority    Priority `json:"priority,omitempty"`
-	Labels      []string `json:"labels,omitempty"`
-	DependsOn   []string `json:"depends_on,omitempty"` // Hard dependencies (blocking)
-	RelatedTo   []string `json:"related_to,omitempty"` // Soft relationships (informational)
+	ID          string    `json:"id"`
+	ParentID    string    `json:"parent_id,omitempty"`
+	Title       string    `json:"title"`
+	Description string    `json:"description,omitempty"`
+	Status      Status    `json:"status"`
+	Priority    Priority  `json:"priority,omitempty"`
+	Labels      []string  `json:"labels,omitempty"`
+	DependsOn   []string  `json:"depends_on,omitempty"` // Hard dependencies (blocking)
+	RelatedTo   []string  `json:"related_to,omitempty"` // Soft relationships (informational)
+	ClaimedBy   string    `json:"claimed_by,omitempty"`
+	ClaimedAt   time.Time `json:"claimed_at,omitempty"`
 	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
@@ -194,6 +196,42 @@ func (s *Saga) HasRelationship(targetID string) bool {
 		}
 	}
 	return false
+}
+
+// IsClaimed returns true if saga is currently claimed
+func (s *Saga) IsClaimed() bool {
+	if s.ClaimedBy == "" {
+		return false
+	}
+	// Check if claim expired (24 hours default)
+	expiry := s.ClaimedAt.Add(24 * time.Hour)
+	return time.Now().Before(expiry)
+}
+
+// Claim marks saga as claimed by agent
+func (s *Saga) Claim(agent string) {
+	s.ClaimedBy = agent
+	s.ClaimedAt = time.Now()
+	s.UpdatedAt = time.Now()
+	s.AddHistory("claimed", "Claimed by "+agent)
+}
+
+// Unclaim releases the claim
+func (s *Saga) Unclaim() {
+	if s.ClaimedBy != "" {
+		s.AddHistory("unclaimed", "Released by "+s.ClaimedBy)
+	}
+	s.ClaimedBy = ""
+	s.ClaimedAt = time.Time{}
+	s.UpdatedAt = time.Now()
+}
+
+// ClaimExpiry returns when claim expires
+func (s *Saga) ClaimExpiry() time.Time {
+	if s.ClaimedAt.IsZero() {
+		return time.Time{}
+	}
+	return s.ClaimedAt.Add(24 * time.Hour)
 }
 
 // AddHistory adds a new entry to the saga's history

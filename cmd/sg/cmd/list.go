@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	showAll     bool
-	scopeLocal  bool
-	scopeGlobal bool
-	labelFilter string
+	showAll       bool
+	scopeLocal    bool
+	scopeGlobal   bool
+	labelFilter   string
+	showUnclaimed bool
 )
 
 var listCmd = &cobra.Command{
@@ -96,6 +97,9 @@ Use flags to filter by scope or show all statuses.`,
 			if labelFilter != "" && !sg.HasLabel(labelFilter) {
 				continue
 			}
+			if showUnclaimed && sg.IsClaimed() {
+				continue
+			}
 			printSagaWithIndent(sg, 0, showAll, children, labelFilter)
 		}
 
@@ -128,7 +132,14 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 	}
 
 	updated := sg.UpdatedAt.Format("Jan 02 15:04")
-	fmt.Printf("%-6s %s%-18s %-10s %s%s\n", sg.ID, indentStr, title, sg.Status, updated, labelStr)
+	
+	// Show claim status
+	claimStr := ""
+	if sg.IsClaimed() {
+		claimStr = fmt.Sprintf(" [claimed by %s]", sg.ClaimedBy)
+	}
+	
+	fmt.Printf("%-6s %s%-18s %-10s %s%s%s\n", sg.ID, indentStr, title, sg.Status, updated, labelStr, claimStr)
 
 	for _, child := range children[sg.ID] {
 		if !showAll && child.Status != saga.StatusActive {
@@ -146,5 +157,6 @@ func init() {
 	listCmd.Flags().BoolVarP(&scopeLocal, "local", "l", false, "Show only project sagas")
 	listCmd.Flags().BoolVarP(&scopeGlobal, "global", "g", false, "Show only global sagas")
 	listCmd.Flags().StringVar(&labelFilter, "label", "", "Filter by label")
+	listCmd.Flags().BoolVar(&showUnclaimed, "unclaimed", false, "Show only unclaimed sagas")
 	rootCmd.AddCommand(listCmd)
 }
