@@ -1,0 +1,21 @@
+# Binary
+sg
+
+# Local saga data (keep local)
+.saga/
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
