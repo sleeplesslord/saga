@@ -26,7 +26,7 @@ Use --force to override this check.`,
 
 		sg, err := st.GetByID(id)
 		if err != nil {
-			return err
+			return sagaNotFound(id)
 		}
 
 		// Check for active children
@@ -35,7 +35,7 @@ Use --force to override this check.`,
 			return fmt.Errorf("checking children: %w", err)
 		}
 		if hasActiveChildren && !force {
-			return fmt.Errorf("cannot mark saga %s as done: has active sub-sagas. Use --force to override", id)
+			return activeChildren(id)
 		}
 
 		// Check for incomplete dependencies
@@ -44,7 +44,7 @@ Use --force to override this check.`,
 			return fmt.Errorf("checking dependencies: %w", err)
 		}
 		if hasIncompleteDeps && !force {
-			return fmt.Errorf("cannot mark saga %s as done: incomplete dependencies %v. Use --force to override", id, incompleteDeps)
+			return incompleteDependencies(id, incompleteDeps)
 		}
 
 		sg.SetStatus(saga.StatusDone)

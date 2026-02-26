@@ -40,11 +40,11 @@ Examples:
 			// Verify parent exists
 			parent, err := st.GetByID(parentID)
 			if err != nil {
-				return fmt.Errorf("parent saga not found: %s", parentID)
+				return parentNotFound(parentID)
 			}
 
 			if parent.Status == saga.StatusDone {
-				return fmt.Errorf("cannot create sub-saga under done saga %s", parentID)
+				return parentDone(parentID)
 			}
 
 			// Generate hierarchical ID
