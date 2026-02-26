@@ -52,12 +52,24 @@ func NewSaga(title string) *Saga {
 	}
 }
 
-// NewSubSaga creates a new saga as a child of parentID
-func NewSubSaga(title string, parentID string) *Saga {
-	sg := NewSaga(title)
-	sg.ParentID = parentID
-	sg.History[0].Note = "Sub-saga created"
-	return sg
+// NewSubSaga creates a new saga as a child of parentID with explicit ID
+func NewSubSaga(title string, id string, parentID string) *Saga {
+	now := time.Now()
+	return &Saga{
+		ID:        id,
+		ParentID:  parentID,
+		Title:     title,
+		Status:    StatusActive,
+		CreatedAt: now,
+		UpdatedAt: now,
+		History: []HistoryEntry{
+			{
+				Timestamp: now,
+				Action:    "created",
+				Note:      "Sub-saga created",
+			},
+		},
+	}
 }
 
 // IsSubSaga returns true if this saga has a parent

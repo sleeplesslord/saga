@@ -353,3 +353,26 @@ func (s *Store) HasActiveChildren(parentID string) (bool, error) {
 
 	return false, nil
 }
+
+// GetNextChildID returns the next available child ID for a parent
+// Format: parent.1, parent.2, etc.
+func (s *Store) GetNextChildID(parentID string) (string, error) {
+	children, err := s.GetChildren(parentID)
+	if err != nil {
+		return "", err
+	}
+
+	// Find highest existing number
+	maxNum := 0
+	for _, child := range children {
+		// Parse child ID format: parent.N
+		var num int
+		if _, err := fmt.Sscanf(child.ID, parentID+".%d", &num); err == nil {
+			if num > maxNum {
+				maxNum = num
+			}
+		}
+	}
+
+	return fmt.Sprintf("%s.%d", parentID, maxNum+1), nil
+}

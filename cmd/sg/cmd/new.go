@@ -43,7 +43,13 @@ Examples:
 				return fmt.Errorf("cannot create sub-saga under done saga %s", parentID)
 			}
 
-			sg = saga.NewSubSaga(title, parentID)
+			// Generate hierarchical ID
+			childID, err := st.GetNextChildID(parentID)
+			if err != nil {
+				return fmt.Errorf("generating child ID: %w", err)
+			}
+
+			sg = saga.NewSubSaga(title, childID, parentID)
 			fmt.Printf("Created sub-saga %s under %s: %s\n", sg.ID, parentID, sg.Title)
 		} else {
 			sg = saga.NewSaga(title)
