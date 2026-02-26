@@ -36,8 +36,7 @@ func main() {
 		handleDone(st, os.Args[2:])
 	case "continue":
 		handleContinue(st, os.Args[2:])
-	case "sub":
-		handleSub(st, os.Args[2:])
+
 	case "init":
 		handleInit(st, os.Args[2:])
 	case "help", "--help", "-h":
@@ -51,19 +50,46 @@ func main() {
 
 func handleNew(st *store.Store, args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "Usage: sg new <title>")
+		fmt.Fprintln(os.Stderr, "Usage: sg new <title> [--parent <parent-id>]")
 		os.Exit(1)
 	}
 
 	title := args[0]
-	sg := saga.NewSaga(title)
+	var parentID string
+
+	// Parse --parent flag if present
+	for i := 1; i < len(args); i++ {
+		if args[i] == "--parent" && i+1 < len(args) {
+			parentID = args[i+1]
+			break
+		}
+	}
+
+	var sg *saga.Saga
+	if parentID != "" {
+		// Verify parent exists
+		parent, err := st.GetByID(parentID)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error: parent saga not found: %s\n", parentID)
+			os.Exit(1)
+		}
+
+		if parent.Status == saga.StatusDone {
+			fmt.Fprintf(os.Stderr, "Cannot create sub-saga under done saga %s\n", parentID)
+			os.Exit(1)
+		}
+
+		sg = saga.NewSubSaga(title, parentID)
+		fmt.Printf("Created sub-saga %s under %s: %s\n", sg.ID, parentID, sg.Title)
+	} else {
+		sg = saga.NewSaga(title)
+		fmt.Printf("Created saga %s: %s\n", sg.ID, sg.Title)
+	}
 
 	if err := st.Save(sg); err != nil {
 		fmt.Fprintf(os.Stderr, "Error saving saga: %v\n", err)
 		os.Exit(1)
 	}
-
-	fmt.Printf("Created saga %s: %s\n", sg.ID, sg.Title)
 }
 
 func handleList(st *store.Store, args []string) {
@@ -139,7 +165,14 @@ func handleList(st *store.Store, args []string) {
 	}
 }
 
+const maxDisplayDepth = 50
+
 func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga) {
+	if indent > maxDisplayDepth {
+		fmt.Printf("%-6s %s[Max depth reached]\n", sg.ID, strings.Repeat("  ", indent))
+		return
+	}
+
 	title := sg.Title
 	if len(title) > 20 {
 		title = title[:17] + "..."
@@ -199,11 +232,21 @@ func handleStatus(st *store.Store, args []string) {
 
 func handleDone(st *store.Store, args []string) {
 	if len(args) < 1 {
-		fmt.Fprintln(os.Stderr, "Usage: sg done <id>")
+		fmt.Fprintln(os.Stderr, "Usage: sg done <id> [--force]")
 		os.Exit(1)
 	}
 
 	id := args[0]
+	force := false
+
+	// Check for --force flag
+	for _, arg := range args {
+		if arg == "--force" {
+			force = true
+			break
+		}
+	}
+
 	sg, err := st.GetByID(id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -216,7 +259,7 @@ func handleDone(st *store.Store, args []string) {
 		fmt.Fprintf(os.Stderr, "Error checking children: %v\n", err)
 		os.Exit(1)
 	}
-	if hasActiveChildren {
+	if hasActiveChildren && !force {
 		fmt.Fprintf(os.Stderr, "Cannot mark saga %s as done: has active sub-sagas\n", id)
 		fmt.Fprintf(os.Stderr, "Complete sub-sagas first or use --force\n")
 		os.Exit(1)
@@ -269,38 +312,6 @@ func handleContinue(st *store.Store, args []string) {
 	fmt.Printf("Status: %s\n", sg.Status)
 }
 
-func handleSub(st *store.Store, args []string) {
-	if len(args) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: sg sub <parent-id> <title>")
-		os.Exit(1)
-	}
-
-	parentID := args[0]
-	title := args[1]
-
-	// Verify parent exists
-	parent, err := st.GetByID(parentID)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	if parent.Status == saga.StatusDone {
-		fmt.Fprintf(os.Stderr, "Cannot add sub-saga to done saga %s\n", parentID)
-		os.Exit(1)
-	}
-
-	// Create sub-saga
-	sg := saga.NewSubSaga(title, parentID)
-
-	if err := st.Save(sg); err != nil {
-		fmt.Fprintf(os.Stderr, "Error saving sub-saga: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Created sub-saga %s under %s: %s\n", sg.ID, parentID, sg.Title)
-}
-
 func printHelp() {
 	help := `Saga - Task management for agent workflows
 
@@ -308,8 +319,7 @@ Usage: sg <command> [args]
 
 Commands:
   init                 Initialize local saga storage (.saga/)
-  new <title>          Create a new saga
-  sub <parent> <title> Create a sub-saga
+  new <title>          Create a new saga (or sub-saga with --parent)
   list [flags]         List sagas (default: active only)
   status <id>          Show saga details and history
   done <id>            Mark saga as complete
@@ -324,7 +334,7 @@ List flags:
 Examples:
   sg init
   sg new "Implement auth system"
-  sg sub abc123 "Add OAuth provider"
+  sg new "Add OAuth" --parent abc123
   sg list              # Shows global + project (if in project)
   sg list --local      # Shows only project sagas
   sg list --global     # Shows only global sagas
