@@ -46,6 +46,13 @@ sg label <id> add|remove <label>
 sg priority <id> high|normal|low
 sg depend <id> add|remove <target>
 sg relate <id> add|remove <target>
+
+# Claim/assign work
+sg claim <id>                      # Claim for 24h (prevents others)
+sg claim <id> --agent <name>       # Claim as specific agent
+sg claim <id> --duration 4h        # Custom expiry
+sg unclaim <id>                    # Release claim
+sg list --unclaimed                # Find available work
 ```
 
 ## Agent Workflow
@@ -65,10 +72,16 @@ sg relate <id> add|remove <target>
    - Check dependencies (any blocking?)
    - Check parent/child relationships
    - Read description for requirements
+   - **Check if claimed** (if claimed by another agent, ask before proceeding)
 
 3. **If no saga exists**, ask user to create one or create it:
    ```bash
    sg new "Implement feature X" --desc "Details from user"
+   ```
+
+4. **Claim the saga** to prevent duplicate work:
+   ```bash
+   sg claim <id> --agent <your-name>
    ```
 
 ### During Work

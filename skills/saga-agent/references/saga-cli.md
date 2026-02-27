@@ -49,6 +49,7 @@ sg list --all               # Include done sagas
 sg list --local            # Project sagas only
 sg list --global           # Global sagas only
 sg list --label bug        # Filter by label
+sg list --unclaimed        # Show only unclaimed (available work)
 ```
 
 **Sorting:** By priority (high → normal → low), then by updated time.
@@ -157,6 +158,21 @@ sg relate abc123 remove def456  # Remove relationship
 ```
 
 **Does not block** completion. For reference only.
+
+### claim
+
+Claim a saga to prevent others from working on it.
+
+```bash
+sg claim abc123                    # Claim for 24h
+sg claim abc123 --agent claude     # Claim as specific agent
+sg claim abc123 --duration 4h      # Custom duration
+sg unclaim abc123                  # Release claim
+sg list --unclaimed               # Find available work
+```
+
+**Use case:** Multiple agents coordinating—claim before starting work.
+**Expiry:** Claims auto-expire after 24h (or custom duration).
 
 ### search
 
