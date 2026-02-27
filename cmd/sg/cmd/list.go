@@ -75,8 +75,8 @@ Use flags to filter by scope or show all statuses.`,
 			fmt.Printf("(Showing global + project sagas from %s)\n\n", filepath.Dir(st.LocalPath()))
 		}
 
-		fmt.Printf("%-6s %-20s %-10s %s\n", "ID", "Title", "Status", "Updated")
-		fmt.Println("-------------------------------------------")
+		fmt.Printf("%-6s %s\n", "ID", "Title Status Updated [labels] [claimed]")
+		fmt.Println(strings.Repeat("-", 75))
 
 		// Build parent lookup
 		children := make(map[string][]*saga.Saga)
@@ -115,31 +115,47 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		return
 	}
 
-	title := sg.Title
-	if len(title) > 20 {
-		title = title[:17] + "..."
-	}
-
-	// Build label string
-	labelStr := ""
-	if len(sg.Labels) > 0 {
-		labelStr = fmt.Sprintf(" [%s]", strings.Join(sg.Labels, ", "))
-	}
-
 	indentStr := ""
 	if indent > 0 {
 		indentStr = strings.Repeat("  ", indent) + "↳ "
 	}
 
-	updated := sg.UpdatedAt.Format("Jan 02 15:04")
+	// Build metadata strings
+	metaParts := []string{}
 	
-	// Show claim status
-	claimStr := ""
-	if sg.IsClaimed() {
-		claimStr = fmt.Sprintf(" [claimed by %s]", sg.ClaimedBy)
+	// Status
+	metaParts = append(metaParts, string(sg.Status))
+	
+	// Updated time
+	metaParts = append(metaParts, sg.UpdatedAt.Format("Jan 02 15:04"))
+	
+	// Labels (compact)
+	if len(sg.Labels) > 0 {
+		labelStr := strings.Join(sg.Labels, ",")
+		if len(labelStr) > 15 {
+			labelStr = labelStr[:12] + "..."
+		}
+		metaParts = append(metaParts, "["+labelStr+"]")
 	}
 	
-	fmt.Printf("%-6s %s%-18s %-10s %s%s%s\n", sg.ID, indentStr, title, sg.Status, updated, labelStr, claimStr)
+	// Claim status (compact)
+	if sg.IsClaimed() {
+		metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+"]")
+	}
+	
+	metaStr := strings.Join(metaParts, " ")
+	
+	// Calculate available space for title
+	// Format: ID + indent + title + metadata
+	// Terminal width estimate: 80 chars
+	availableWidth := 80 - 6 - len(indentStr) - len(metaStr) - 3 // 3 for spacing
+	
+	title := sg.Title
+	if len(title) > availableWidth && availableWidth > 10 {
+		title = title[:availableWidth-3] + "..."
+	}
+	
+	fmt.Printf("%-6s %s%s %s\n", sg.ID, indentStr, title, metaStr)
 
 	for _, child := range children[sg.ID] {
 		if !showAll && child.Status != saga.StatusActive {

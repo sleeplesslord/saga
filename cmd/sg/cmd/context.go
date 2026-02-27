@@ -200,30 +200,28 @@ func printContext(ctx *SagaContext) {
 	}
 	fmt.Println()
 
-	// Hierarchy
-	fmt.Println(repeat("─", 40))
-	fmt.Println("HIERARCHY")
-	fmt.Println(repeat("─", 40))
-	if ctx.Parent != nil {
-		fmt.Printf("Parent:  %s (%s) - %s\n", ctx.Parent.ID, ctx.Parent.Status, ctx.Parent.Title)
-	} else {
-		fmt.Println("Parent:  (none - root saga)")
-	}
-	if len(ctx.Children) > 0 {
-		fmt.Printf("Children: %d\n", len(ctx.Children))
-		for _, child := range ctx.Children {
-			fmt.Printf("  • %s (%s) - %s\n", child.ID, child.Status, child.Title)
+	// Hierarchy (only if has parent or children)
+	if ctx.Parent != nil || len(ctx.Children) > 0 {
+		fmt.Println(repeat("─", 40))
+		fmt.Println("HIERARCHY")
+		fmt.Println(repeat("─", 40))
+		if ctx.Parent != nil {
+			fmt.Printf("Parent:  %s (%s) - %s\n", ctx.Parent.ID, ctx.Parent.Status, ctx.Parent.Title)
 		}
-	} else {
-		fmt.Println("Children: (none)")
+		if len(ctx.Children) > 0 {
+			fmt.Printf("Children: %d\n", len(ctx.Children))
+			for _, child := range ctx.Children {
+				fmt.Printf("  • %s (%s) - %s\n", child.ID, child.Status, child.Title)
+			}
+		}
+		fmt.Println()
 	}
-	fmt.Println()
 
-	// Dependencies
-	fmt.Println(repeat("─", 40))
-	fmt.Println("DEPENDENCIES")
-	fmt.Println(repeat("─", 40))
+	// Dependencies (only if exists)
 	if len(ctx.Dependencies) > 0 {
+		fmt.Println(repeat("─", 40))
+		fmt.Println("DEPENDENCIES")
+		fmt.Println(repeat("─", 40))
 		blocking := 0
 		for _, dep := range ctx.Dependencies {
 			status := "✓ done"
@@ -239,10 +237,8 @@ func printContext(ctx *SagaContext) {
 		} else {
 			fmt.Println("✓ All dependencies complete")
 		}
-	} else {
-		fmt.Println("(none)")
+		fmt.Println()
 	}
-	fmt.Println()
 
 	// Related
 	if len(ctx.Related) > 0 {
