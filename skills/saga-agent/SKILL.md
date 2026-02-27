@@ -221,9 +221,3 @@ Complete these first:
 ## Reference Files
 
 - `references/saga-cli.md` - Full CLI reference
-
-## Skill Maintenance
-
-⚠️ **When modifying Saga commands, always update this skill file.** The skill is the contract between Saga and agents using it. Keep them in sync.
-
-See rune: `zhs0` (Saga skill co-maintenance requirement)
