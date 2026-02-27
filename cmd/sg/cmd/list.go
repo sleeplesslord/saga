@@ -76,7 +76,7 @@ Use flags to filter by scope or show all statuses.`,
 		}
 
 		fmt.Printf("%-6s %s\n", "ID", "Title Status Updated [labels] [claimed]")
-		fmt.Println(strings.Repeat("-", 75))
+		fmt.Println(strings.Repeat("-", 155))
 
 		// Build parent lookup
 		children := make(map[string][]*saga.Saga)
@@ -147,11 +147,15 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 	
 	// Calculate available space for title
 	// Format: ID + indent + title + metadata
-	// Terminal width estimate: 80 chars
-	availableWidth := 80 - 6 - len(indentStr) - len(metaStr) - 3 // 3 for spacing
+	// Terminal width: 160 chars (modern terminals)
+	terminalWidth := 160
+	availableWidth := terminalWidth - 6 - len(indentStr) - len(metaStr) - 3 // 3 for spacing
+	if availableWidth < 30 {
+		availableWidth = 30 // Minimum title space
+	}
 	
 	title := sg.Title
-	if len(title) > availableWidth && availableWidth > 10 {
+	if len(title) > availableWidth {
 		title = title[:availableWidth-3] + "..."
 	}
 	
