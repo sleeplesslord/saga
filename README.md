@@ -23,17 +23,17 @@ cd my-project
 sg init
 
 # Create a saga
-g new "Implement feature X" --desc "Details here"
+sg new "Implement feature X" --desc "Details here"
 
 # See what's ready to work on
-g ready
+sg ready
 
 # Claim and work
-g claim <id>
-g log <id> "Started implementation"
+sg claim <id>
+sg log <id> "Started implementation"
 
 # Mark done
-g done <id>
+sg done <id>
 ```
 
 ## Core Concepts
@@ -53,9 +53,9 @@ A saga is a task or project. It has:
 Break large work into pieces:
 
 ```bash
-g new "Parent task"                              # Creates abc123
-g new "Sub-task 1" --parent abc123              # Creates abc123.1
-g new "Sub-task 2" --parent abc123              # Creates abc123.2
+sg new "Parent task"                              # Creates abc123
+sg new "Sub-task 1" --parent abc123              # Creates abc123.1
+sg new "Sub-task 2" --parent abc123              # Creates abc123.2
 ```
 
 Hierarchical IDs make relationships obvious: `parent.1`, `parent.2`, etc.
@@ -65,14 +65,14 @@ Hierarchical IDs make relationships obvious: `parent.1`, `parent.2`, etc.
 Hard dependencies block completion:
 
 ```bash
-g depend abc123 add def456    # abc123 blocked until def456 done
-g done def456                 # Now abc123 can be completed
+sg depend abc123 add def456    # abc123 blocked until def456 done
+sg done def456                 # Now abc123 can be completed
 ```
 
 Soft relationships (informational only):
 
 ```bash
-g relate abc123 add def456    # Link related work
+sg relate abc123 add def456    # Link related work
 ```
 
 ### Claims
@@ -80,9 +80,9 @@ g relate abc123 add def456    # Link related work
 Prevent duplicate work:
 
 ```bash
-g claim abc123                # Mark as "in progress"
-g list --unclaimed            # Find available work
-g unclaim abc123              # Release claim
+sg claim abc123                # Mark as "in progress"
+sg list --unclaimed            # Find available work
+sg unclaim abc123              # Release claim
 ```
 
 Claims expire after 24 hours (auto-cleanup of stale claims).
@@ -123,12 +123,12 @@ Claims expire after 24 hours (auto-cleanup of stale claims).
 Both global and project-local storage:
 
 ```bash
-g init                        # Create local .saga/ in project
-g new "Local task"            # Saved in ./.saga/
-g new "Global task" --global  # Saved in ~/.saga/
-g list --local               # Project only
-g list --global              # Global only
-g list                       # Both (default if in project)
+sg init                        # Create local .saga/ in project
+sg new "Local task"            # Saved in ./.saga/
+sg new "Global task" --global  # Saved in ~/.saga/
+sg list --local               # Project only
+sg list --global              # Global only
+sg list                       # Both (default if in project)
 ```
 
 ## Agent Workflow
@@ -158,7 +158,7 @@ Saga shines when agents use it:
 
 ```bash
 # In saga: see linked knowledge
-g context <id>
+sg context <id>
 # KNOWLEDGE (Runes)
 #   • xr5h - Fixed auth timeout [auth-timeout-retry]
 
