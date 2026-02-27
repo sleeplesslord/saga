@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hbn/saga/internal/saga"
@@ -45,6 +46,7 @@ func New(globalPath string) (*Store, error) {
 }
 
 // findLocalSagaDir searches for .saga/ directory in current or parent directories
+// Also checks for git worktrees to find .saga in the main repo
 func findLocalSagaDir() string {
 	dir, err := os.Getwd()
 	if err != nil {
@@ -58,12 +60,48 @@ func findLocalSagaDir() string {
 			return filepath.Join(sagaDir, "sagas.jsonl")
 		}
 
+		// Check for git worktree (.git file points to main repo)
+		if worktreeDir := findWorktreeSagaDir(dir); worktreeDir != "" {
+			return worktreeDir
+		}
+
 		// Check if we can go up
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			break
 		}
 		dir = parent
+	}
+
+	return ""
+}
+
+// findWorktreeSagaDir checks if dir is a git worktree and returns path to main repo's .saga
+func findWorktreeSagaDir(dir string) string {
+	gitFile := filepath.Join(dir, ".git")
+	info, err := os.Stat(gitFile)
+	if err != nil || info.IsDir() {
+		// Not a worktree (either no .git or it's a directory)
+		return ""
+	}
+
+	// .git is a file - this is a worktree, read it to find main repo
+	content, err := os.ReadFile(gitFile)
+	if err != nil {
+		return ""
+	}
+
+	// Parse "gitdir: /path/to/main/.git/worktrees/..." format
+	contentStr := string(content)
+	const prefix = "gitdir: "
+	if idx := len(prefix); len(contentStr) > idx {
+		gitDir := strings.TrimSpace(contentStr[idx:])
+		// gitDir points to .git/worktrees/<name>, go up to find main repo
+		mainRepoDir := filepath.Dir(filepath.Dir(gitDir))
+		sagaDir := filepath.Join(mainRepoDir, ".saga")
+		if info, err := os.Stat(sagaDir); err == nil && info.IsDir() {
+			return filepath.Join(sagaDir, "sagas.jsonl")
+		}
 	}
 
 	return ""
