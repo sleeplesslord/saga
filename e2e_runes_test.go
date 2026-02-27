@@ -25,8 +25,8 @@ func NewRunesTestRunner(t *testing.T) *RunesTestRunner {
 	sagaBin := filepath.Join(wd, "sg_test")
 	exec.Command("go", "build", "-o", sagaBin, "./cmd/sg").Run()
 
-	// Build runes binary (from runes repo)
-	runesBin := filepath.Join(wd, "runes_test")
+	// Build runes binary (from runes repo) - name it 'runes' so sg context can find it
+	runesBin := filepath.Join(wd, "runes")
 	exec.Command("go", "build", "-o", runesBin, "../runes/cmd/runes").Run()
 
 	tempDir, _ := os.MkdirTemp("", "saga-runes-e2e-*")
@@ -114,21 +114,21 @@ func TestRunesIntegration(t *testing.T) {
 			t.Fatal("No saga ID from previous test")
 		}
 
+
+
 		// Check context shows rune
-		// Note: This test requires runes binary in PATH and uses default ~/.runes/ storage
-		// The test runes uses temp directory, so this won't find it unless we symlink or modify storage path
+		// Both saga and runes use the temp directory with .saga/ and .runes/
 		out, err := runner.RunSaga("context", sagaID)
 		if err != nil {
 			t.Fatalf("Failed to get context: %v\n%s", err, out)
 		}
 
-		// Should show knowledge section with rune (if runes data is in default location)
-		// For full integration test, runes would need to use same storage as saga context expects
-		if strings.Contains(out, "KNOWLEDGE") && strings.Contains(out, runeTitle) {
-			// Success - integration working
-		} else {
-			t.Logf("Note: Runes integration requires shared storage. Context output:\n%s", out)
-			t.Skip("Runes not in default location - skipping full integration verification")
+		// Should show knowledge section with rune
+		if !strings.Contains(out, "KNOWLEDGE") {
+			t.Errorf("Expected KNOWLEDGE section in context. Output:\n%s", out)
+		}
+		if !strings.Contains(out, runeTitle) {
+			t.Errorf("Expected rune title '%s' in context. Output:\n%s", runeTitle, out)
 		}
 	})
 
