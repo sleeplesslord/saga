@@ -37,6 +37,7 @@ sg new "title"                     # Create saga
 sg new "title" --parent <id>     # Create sub-saga
 sg new "title" --label bug --priority high --desc "details"
 sg done <id>                       # Mark complete
+sg done <id> --reason "message"    # Mark done with reason
 sg done <id> --force               # Force completion
 sg log <id> "progress note"        # Log work
 sg log <id> --file notes.md       # Log from file
@@ -124,6 +125,12 @@ sg new "Sub-task 2" --parent <parent-id>
 3. **Mark as done:**
    ```bash
    sg done <id>
+   ```
+   
+   With completion reason (logs to history):
+   ```bash
+   sg done <id> --reason "Implemented and tested"
+   sg done <id> --reason "No longer needed - requirements changed"
    ```
    
    If blocked but user wants to force:
@@ -214,3 +221,9 @@ Complete these first:
 ## Reference Files
 
 - `references/saga-cli.md` - Full CLI reference
+
+## Skill Maintenance
+
+⚠️ **When modifying Saga commands, always update this skill file.** The skill is the contract between Saga and agents using it. Keep them in sync.
+
+See rune: `zhs0` (Saga skill co-maintenance requirement)
