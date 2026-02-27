@@ -43,6 +43,8 @@ sg log <id> "progress note"        # Log work
 sg log <id> --file notes.md       # Log from file
 
 # Modify
+sg edit <id> --title "new title"   # Update title
+sg edit <id> --desc "new desc"     # Update description
 sg label <id> add|remove <label>
 sg priority <id> high|normal|low
 sg depend <id> add|remove <target>
