@@ -266,6 +266,22 @@ func printContext(ctx *SagaContext) {
 		fmt.Println()
 	}
 
+	// Suggested runes (based on saga content)
+	suggested := suggestRunes(sg)
+	if len(suggested) > 0 {
+		fmt.Println(repeat("─", 40))
+		fmt.Println("💡 SUGGESTED RUNES")
+		fmt.Println(repeat("─", 40))
+		fmt.Println("Based on this saga's content, these runes may be relevant:")
+		for _, r := range suggested {
+			fmt.Printf("  • %s - %s\n", r.ID, r.Title)
+		}
+		fmt.Println()
+		fmt.Println("Search runes: runes search \"<keywords>\"")
+		fmt.Println("Show details:  runes show <id>")
+		fmt.Println()
+	}
+
 	// History
 	fmt.Println(repeat("─", 40))
 	fmt.Println("RECENT HISTORY")
@@ -310,6 +326,90 @@ func canComplete(ctx *SagaContext) bool {
 		}
 	}
 	return true
+}
+
+// suggestRunes searches runes based on saga title/description keywords
+func suggestRunes(sg *saga.Saga) []BriefRune {
+	// Extract keywords from title and description
+	keywords := extractKeywords(sg.Title + " " + sg.Description)
+	if len(keywords) == 0 {
+		return nil
+	}
+
+	// Search runes with keywords
+	var suggested []BriefRune
+	for _, kw := range keywords {
+		if len(kw) < 3 {
+			continue // Skip short words
+		}
+		runesCmd := exec.Command("runes", "search", kw)
+		output, err := runesCmd.Output()
+		if err != nil || len(output) == 0 {
+			continue
+		}
+
+		// Parse results
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") {
+				continue
+			}
+			parts := strings.Fields(line)
+			if len(parts) >= 2 {
+				// Check if already added
+				exists := false
+				for _, s := range suggested {
+					if s.ID == parts[0] {
+						exists = true
+						break
+					}
+				}
+				if !exists {
+					suggested = append(suggested, BriefRune{
+						ID:    parts[0],
+						Title: strings.Join(parts[1:], " "),
+					})
+					if len(suggested) >= 5 {
+						return suggested // Max 5 suggestions
+					}
+				}
+			}
+		}
+	}
+
+	return suggested
+}
+
+// extractKeywords extracts meaningful keywords from text
+func extractKeywords(text string) []string {
+	// Simple keyword extraction - split and filter
+	words := strings.Fields(strings.ToLower(text))
+	var keywords []string
+	stopWords := map[string]bool{
+		"the": true, "a": true, "an": true, "and": true, "or": true,
+		"in": true, "on": true, "at": true, "to": true, "for": true,
+		"of": true, "with": true, "by": true, "is": true, "are": true,
+		"was": true, "be": true, "been": true, "have": true, "has": true,
+		"had": true, "do": true, "does": true, "did": true, "will": true,
+		"would": true, "should": true, "could": true, "can": true,
+		"add": true, "create": true, "fix": true, "implement": true,
+		"update": true, "make": true, "use": true, "using": true,
+	}
+
+	seen := make(map[string]bool)
+	for _, w := range words {
+		// Remove punctuation
+		w = strings.TrimFunc(w, func(r rune) bool {
+			return r < 'a' || r > 'z'
+		})
+		if len(w) >= 3 && !stopWords[w] && !seen[w] {
+			keywords = append(keywords, w)
+			seen[w] = true
+		}
+	}
+
+	return keywords
 }
 
 func init() {
