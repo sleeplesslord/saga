@@ -9,12 +9,18 @@ import (
 )
 
 var force bool
+var doneReason string
 
 var doneCmd = &cobra.Command{
 	Use:   "done <id>",
 	Short: "Mark saga as complete",
 	Long: `Mark a saga as done. By default, cannot mark a saga as done if it has active sub-sagas.
-Use --force to override this check.`,
+Use --force to override this check.
+
+Use --reason to log why the saga was closed:`,
+	Example: `  sg done abc123
+  sg done abc123 --reason "Implemented and tested"
+  sg done abc123 --reason "No longer needed - requirements changed"`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]
@@ -49,6 +55,11 @@ Use --force to override this check.`,
 
 		sg.SetStatus(saga.StatusDone)
 
+		// Log reason if provided
+		if doneReason != "" {
+			sg.AddHistory("completed", doneReason)
+		}
+
 		if err := st.Update(sg); err != nil {
 			return fmt.Errorf("updating saga: %w", err)
 		}
@@ -60,5 +71,6 @@ Use --force to override this check.`,
 
 func init() {
 	doneCmd.Flags().BoolVar(&force, "force", false, "Force completion even with active children")
+	doneCmd.Flags().StringVar(&doneReason, "reason", "", "Reason for closing the saga (logged in history)")
 	rootCmd.AddCommand(doneCmd)
 }
