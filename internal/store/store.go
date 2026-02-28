@@ -25,6 +25,99 @@ type Store struct {
 	globalPath string
 	localPath  string
 	mu         sync.RWMutex
+	
+	// In-memory indexes (rebuilt from JSONL)
+	indexByID       map[string]*saga.Saga
+	indexByParent   map[string][]*saga.Saga
+	indexByStatus   map[saga.Status][]*saga.Saga
+	indexByLabel    map[string][]*saga.Saga
+	indexLoaded     bool
+}
+
+// loadIndexes builds in-memory indexes from JSONL files
+func (s *Store) loadIndexes() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	if s.indexLoaded {
+		return nil
+	}
+	
+	// Initialize indexes
+	s.indexByID = make(map[string]*saga.Saga)
+	s.indexByParent = make(map[string][]*saga.Saga)
+	s.indexByStatus = make(map[saga.Status][]*saga.Saga)
+	s.indexByLabel = make(map[string][]*saga.Saga)
+	
+	// Load all sagas
+	sagas, err := s.loadAllUnlocked()
+	if err != nil {
+		return err
+	}
+	
+	// Build indexes
+	for _, sg := range sagas {
+		s.indexSaga(sg)
+	}
+	
+	s.indexLoaded = true
+	return nil
+}
+
+// indexSaga adds a saga to all indexes
+func (s *Store) indexSaga(sg *saga.Saga) {
+	s.indexByID[sg.ID] = sg
+	
+	// Index by parent
+	if sg.IsSubSaga() {
+		s.indexByParent[sg.ParentID] = append(s.indexByParent[sg.ParentID], sg)
+	}
+	
+	// Index by status
+	s.indexByStatus[sg.Status] = append(s.indexByStatus[sg.Status], sg)
+	
+	// Index by labels
+	for _, label := range sg.Labels {
+		s.indexByLabel[label] = append(s.indexByLabel[label], sg)
+	}
+}
+
+// updateIndex replaces a saga in indexes after update
+func (s *Store) updateIndex(old, updated *saga.Saga) {
+	// Remove old from status index
+	if old != nil {
+		s.removeFromStatusIndex(old)
+		s.removeFromLabelIndex(old)
+	}
+	
+	// Add updated
+	s.indexByID[updated.ID] = updated
+	s.indexByStatus[updated.Status] = append(s.indexByStatus[updated.Status], updated)
+	for _, label := range updated.Labels {
+		s.indexByLabel[label] = append(s.indexByLabel[label], updated)
+	}
+}
+
+func (s *Store) removeFromStatusIndex(sg *saga.Saga) {
+	var filtered []*saga.Saga
+	for _, s := range s.indexByStatus[sg.Status] {
+		if s.ID != sg.ID {
+			filtered = append(filtered, s)
+		}
+	}
+	s.indexByStatus[sg.Status] = filtered
+}
+
+func (s *Store) removeFromLabelIndex(sg *saga.Saga) {
+	for _, label := range sg.Labels {
+		var filtered []*saga.Saga
+		for _, s := range s.indexByLabel[label] {
+			if s.ID != sg.ID {
+				filtered = append(filtered, s)
+			}
+		}
+		s.indexByLabel[label] = filtered
+	}
 }
 
 // New creates a new Store with global path, auto-detects local
@@ -163,6 +256,29 @@ func (s *Store) LoadAll(scopes ...Scope) ([]*saga.Saga, error) {
 	return allSagas, nil
 }
 
+// loadAllUnlocked loads all sagas without locking (caller must hold lock)
+func (s *Store) loadAllUnlocked() ([]*saga.Saga, error) {
+	var allSagas []*saga.Saga
+	
+	// Load global
+	sagas, err := s.loadFromPathUnlocked(s.globalPath)
+	if err != nil {
+		return nil, err
+	}
+	allSagas = append(allSagas, sagas...)
+	
+	// Load local if exists
+	if s.localPath != "" {
+		sagas, err = s.loadFromPathUnlocked(s.localPath)
+		if err != nil {
+			return nil, err
+		}
+		allSagas = append(allSagas, sagas...)
+	}
+	
+	return allSagas, nil
+}
+
 // loadFromPath loads sagas from a specific file path
 func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
 	file, err := os.Open(path)
@@ -259,6 +375,11 @@ func (s *Store) Update(updated *saga.Saga) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	var old *saga.Saga
+	if s.indexLoaded {
+		old = s.indexByID[updated.ID]
+	}
+
 	// Try local first, then global
 	scopes := []Scope{ScopeLocal, ScopeGlobal}
 	for _, scope := range scopes {
@@ -285,6 +406,10 @@ func (s *Store) Update(updated *saga.Saga) error {
 		}
 
 		if found {
+			// Update indexes
+			if s.indexLoaded {
+				s.updateIndex(old, updated)
+			}
 			return s.saveAllUnlocked(path, sagas)
 		}
 	}
@@ -340,40 +465,34 @@ func (s *Store) saveAllUnlocked(path string, sagas []*saga.Saga) error {
 	return nil
 }
 
-// GetByID finds a saga by its ID (searches both scopes)
+// GetByID finds a saga by its ID (uses index if available)
 func (s *Store) GetByID(id string) (*saga.Saga, error) {
-	// Try local first, then global
-	scopes := []Scope{ScopeLocal, ScopeGlobal}
-	for _, scope := range scopes {
-		sagas, err := s.LoadAll(scope)
-		if err != nil {
-			return nil, err
-		}
-		for _, sg := range sagas {
-			if sg.ID == id {
-				return sg, nil
-			}
-		}
+	// Ensure indexes are loaded
+	if err := s.loadIndexes(); err != nil {
+		return nil, err
 	}
-
+	
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	if sg, ok := s.indexByID[id]; ok {
+		return sg, nil
+	}
+	
 	return nil, fmt.Errorf("saga not found: %s", id)
 }
 
-// GetChildren returns all direct children of a saga
+// GetChildren returns all direct children of a saga (uses index)
 func (s *Store) GetChildren(parentID string) ([]*saga.Saga, error) {
-	sagas, err := s.LoadAll()
-	if err != nil {
+	// Ensure indexes are loaded
+	if err := s.loadIndexes(); err != nil {
 		return nil, err
 	}
-
-	var children []*saga.Saga
-	for _, sg := range sagas {
-		if sg.ParentID == parentID {
-			children = append(children, sg)
-		}
-	}
-
-	return children, nil
+	
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	
+	return s.indexByParent[parentID], nil
 }
 
 // HasActiveChildren returns true if saga has any children that aren't done
