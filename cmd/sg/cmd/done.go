@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
 
 	"github.com/hbn/saga/internal/saga"
 	"github.com/hbn/saga/internal/store"
@@ -65,8 +67,39 @@ Use --reason to log why the saga was closed:`,
 		}
 
 		fmt.Printf("Marked saga %s as done\n", sg.ID)
+
+		// Hint about runes if installed
+		if isRunesInstalled() {
+			fmt.Println()
+			fmt.Println("💡 This saga involved problem-solving. Capture the knowledge?")
+			fmt.Println("   runes add \"<title>\" --problem \"...\" --solution \"...\" --saga " + sg.ID)
+			fmt.Println("   runes edit <id> --learned \"<insight>\"")
+		}
+
 		return nil
 	},
+}
+
+// isRunesInstalled checks if runes CLI is available
+func isRunesInstalled() bool {
+	// Check PATH first
+	_, err := exec.LookPath("runes")
+	if err == nil {
+		return true
+	}
+	// Check common locations
+	commonPaths := []string{
+		"/usr/local/bin/runes",
+		"/usr/bin/runes",
+		"/home/hbn/.openclaw/workspace/runes/runes",
+		os.ExpandEnv("$HOME/go/bin/runes"),
+	}
+	for _, path := range commonPaths {
+		if _, err := os.Stat(path); err == nil {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {
