@@ -56,15 +56,19 @@ sg claim <id> --agent <name>       # Claim as specific agent
 sg claim <id> --duration 4h        # Custom expiry
 sg unclaim <id>                    # Release claim
 sg list --unclaimed                # Find available work
+
+# Find work
+sg ready                           # List unblocked, unclaimed sagas
 ```
 
 ## Agent Workflow
 
 ### Before Starting Work
 
-1. **Check if saga exists** for this task:
+1. **Find available work** (or check if saga exists):
    ```bash
-   sg search "task name"
+   sg ready                           # See what's ready to work on
+   sg search "task name"              # Or search for specific task
    ```
 
 2. **If saga exists**, read context:
