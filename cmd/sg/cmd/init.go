@@ -23,6 +23,15 @@ var initCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Initialized local saga storage in %s\n", filepath.Dir(st.LocalPath()))
+		fmt.Println()
+		fmt.Println("Basic usage:")
+		fmt.Println("  sg ready              # Find work to do")
+		fmt.Println("  sg claim <id>         # Claim a saga")
+		fmt.Println("  sg context <id>       # Read context")
+		fmt.Println("  sg log <id> \"...\"    # Log progress")
+		fmt.Println("  sg done <id>          # Mark complete")
+		fmt.Println()
+		fmt.Println("See AGENTS.md for full documentation")
 		return nil
 	},
 }
