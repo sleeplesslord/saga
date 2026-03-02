@@ -91,21 +91,42 @@ Examples:
 		}
 
 		fmt.Printf("Found %d saga(s):\n\n", len(matches))
-		fmt.Printf("%-6s %-20s %-10s %s\n", "ID", "Title", "Status", "Labels")
-		fmt.Println("-------------------------------------------")
+
+		// Use consistent formatting with sg list
+		// Terminal width: 160 chars (modern terminals)
+		terminalWidth := 160
 
 		for _, sg := range matches {
-			title := sg.Title
-			if len(title) > 20 {
-				title = title[:17] + "..."
-			}
+			// Build metadata strings
+			metaParts := []string{}
 
-			labels := ""
+			// Status
+			metaParts = append(metaParts, string(sg.Status))
+
+			// Labels
 			if len(sg.Labels) > 0 {
-				labels = fmt.Sprintf("[%s]", strings.Join(sg.Labels, ", "))
+				labelStr := strings.Join(sg.Labels, ", ")
+				if len(labelStr) > 20 {
+					labelStr = labelStr[:17] + "..."
+				}
+				metaParts = append(metaParts, "["+labelStr+"]")
 			}
 
-			fmt.Printf("%-6s %-20s %-10s %s\n", sg.ID, title, sg.Status, labels)
+			metaStr := strings.Join(metaParts, " ")
+
+			// Calculate available space for title
+			// Format: ID + title + metadata + spacing
+			availableWidth := terminalWidth - 6 - len(metaStr) - 3 // 3 for spacing
+			if availableWidth < 30 {
+				availableWidth = 30 // Minimum title space
+			}
+
+			title := sg.Title
+			if len(title) > availableWidth {
+				title = title[:availableWidth-3] + "..."
+			}
+
+			fmt.Printf("%-6s %s %s\n", sg.ID, title, metaStr)
 		}
 
 		return nil
