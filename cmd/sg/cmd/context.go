@@ -101,7 +101,7 @@ Examples:
 
 		// Get linked runes (knowledge) via runes CLI
 		// Run from current directory so runes can find local .runes/
-		runesCmd := exec.Command("runes", "search", sg.ID)
+		runesCmd := exec.Command("runes", "search", "--saga", sg.ID)
 		runesCmd.Dir = "." // Explicitly use current directory
 		output, err := runesCmd.Output()
 		if err == nil && len(output) > 0 {
