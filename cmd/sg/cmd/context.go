@@ -101,35 +101,23 @@ Examples:
 
 		// Get linked runes (knowledge) via runes CLI
 		// Run from current directory so runes can find local .runes/
-		runesCmd := exec.Command("runes", "search", "--saga", sg.ID)
+		runesCmd := exec.Command("runes", "search", "--json", "--saga", sg.ID)
 		runesCmd.Dir = "." // Explicitly use current directory
 		output, err := runesCmd.Output()
 		if err == nil && len(output) > 0 {
-			// Parse runes search output
-			lines := strings.Split(string(output), "\n")
-			// Find the "Found X rune(s):" line - it may not be first (e.g., after "Saga: ID")
-			foundIndex := -1
-			for i, line := range lines {
-				if strings.HasPrefix(line, "Found") {
-					foundIndex = i
-					break
-				}
+			// Try parsing as saga-linked runes format: {"runes": [...]}
+			var sagaResult struct {
+				Runes []struct {
+					ID    string `json:"id"`
+					Title string `json:"title"`
+				} `json:"runes"`
 			}
-			// Only parse if runes were found
-			if foundIndex >= 0 {
-				for _, line := range lines[foundIndex:] {
-					line = strings.TrimSpace(line)
-					if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") || strings.HasPrefix(line, "Saga:") {
-						continue
-					}
-					// Parse: "ID   Title" format
-					parts := strings.Fields(line)
-					if len(parts) >= 2 {
-						ctx.Runes = append(ctx.Runes, BriefRune{
-							ID:    parts[0],
-							Title: strings.Join(parts[1:], " "),
-						})
-					}
+			if err := json.Unmarshal(output, &sagaResult); err == nil && len(sagaResult.Runes) > 0 {
+				for _, r := range sagaResult.Runes {
+					ctx.Runes = append(ctx.Runes, BriefRune{
+						ID:    r.ID,
+						Title: r.Title,
+					})
 				}
 			}
 		}
@@ -353,36 +341,40 @@ func suggestRunes(sg *saga.Saga) []BriefRune {
 		if len(kw) < 3 {
 			continue // Skip short words
 		}
-		runesCmd := exec.Command("runes", "search", kw)
+		runesCmd := exec.Command("runes", "search", "--json", kw)
 		output, err := runesCmd.Output()
 		if err != nil || len(output) == 0 {
 			continue
 		}
 
-		// Parse results - only if runes were found
-		lines := strings.Split(string(output), "\n")
-		if len(lines) == 0 || !strings.HasPrefix(lines[0], "Found") {
+		// Parse JSON output
+		var result struct {
+			Queries []struct {
+				Query   string `json:"query"`
+				Results []struct {
+					ID    string `json:"id"`
+					Title string `json:"title"`
+				} `json:"results"`
+			} `json:"queries"`
+		}
+		if err := json.Unmarshal(output, &result); err != nil {
 			continue
 		}
-		for _, line := range lines {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") {
-				continue
-			}
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
+
+		for _, q := range result.Queries {
+			for _, r := range q.Results {
 				// Check if already added
 				exists := false
 				for _, s := range suggested {
-					if s.ID == parts[0] {
+					if s.ID == r.ID {
 						exists = true
 						break
 					}
 				}
 				if !exists {
 					suggested = append(suggested, BriefRune{
-						ID:    parts[0],
-						Title: strings.Join(parts[1:], " "),
+						ID:    r.ID,
+						Title: r.Title,
 					})
 					if len(suggested) >= 5 {
 						return suggested // Max 5 suggestions
