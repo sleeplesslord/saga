@@ -1,5 +1,5 @@
 ---
-name: saga-agent
+name: saga
 description: Integration with Saga task management system for agents. Use when working with sagas to track work, check context, log progress, and coordinate with human planning. Triggers on saga-related tasks like reading context, creating sagas, updating status, logging work, searching sagas, and checking dependencies.
 ---
 

@@ -209,7 +209,7 @@ Dependencies:
 ## See Also
 
 - [Runes](https://github.com/sleeplesslord/runes) — Knowledge management
-- [Agent Skill](skills/saga-agent/) — Teach agents to use Saga
+- [Agent Skill](skills/saga/) — Teach agents to use Saga
 
 ## License
 
