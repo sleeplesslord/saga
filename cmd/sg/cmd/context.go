@@ -107,11 +107,19 @@ Examples:
 		if err == nil && len(output) > 0 {
 			// Parse runes search output
 			lines := strings.Split(string(output), "\n")
-			// Only parse if runes were found (first line should be "Found X rune(s):")
-			if len(lines) > 0 && strings.HasPrefix(lines[0], "Found") {
-				for _, line := range lines {
+			// Find the "Found X rune(s):" line - it may not be first (e.g., after "Saga: ID")
+			foundIndex := -1
+			for i, line := range lines {
+				if strings.HasPrefix(line, "Found") {
+					foundIndex = i
+					break
+				}
+			}
+			// Only parse if runes were found
+			if foundIndex >= 0 {
+				for _, line := range lines[foundIndex:] {
 					line = strings.TrimSpace(line)
-					if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") {
+					if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") || strings.HasPrefix(line, "Saga:") {
 						continue
 					}
 					// Parse: "ID   Title" format
