@@ -107,18 +107,21 @@ Examples:
 		if err == nil && len(output) > 0 {
 			// Parse runes search output
 			lines := strings.Split(string(output), "\n")
-			for _, line := range lines {
-				line = strings.TrimSpace(line)
-				if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") {
-					continue
-				}
-				// Parse: "ID   Title" format
-				parts := strings.Fields(line)
-				if len(parts) >= 2 {
-					ctx.Runes = append(ctx.Runes, BriefRune{
-						ID:    parts[0],
-						Title: strings.Join(parts[1:], " "),
-					})
+			// Only parse if runes were found (first line should be "Found X rune(s):")
+			if len(lines) > 0 && strings.HasPrefix(lines[0], "Found") {
+				for _, line := range lines {
+					line = strings.TrimSpace(line)
+					if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") {
+						continue
+					}
+					// Parse: "ID   Title" format
+					parts := strings.Fields(line)
+					if len(parts) >= 2 {
+						ctx.Runes = append(ctx.Runes, BriefRune{
+							ID:    parts[0],
+							Title: strings.Join(parts[1:], " "),
+						})
+					}
 				}
 			}
 		}
@@ -150,9 +153,9 @@ type SagaContext struct {
 
 // BriefSaga minimal saga info
 type BriefSaga struct {
-	ID     string       `json:"id"`
-	Title  string       `json:"title"`
-	Status saga.Status  `json:"status"`
+	ID     string      `json:"id"`
+	Title  string      `json:"title"`
+	Status saga.Status `json:"status"`
 }
 
 // BriefRune minimal rune info
@@ -348,8 +351,11 @@ func suggestRunes(sg *saga.Saga) []BriefRune {
 			continue
 		}
 
-		// Parse results
+		// Parse results - only if runes were found
 		lines := strings.Split(string(output), "\n")
+		if len(lines) == 0 || !strings.HasPrefix(lines[0], "Found") {
+			continue
+		}
 		for _, line := range lines {
 			line = strings.TrimSpace(line)
 			if strings.HasPrefix(line, "Found") || line == "" || strings.HasPrefix(line, "Problem:") || strings.HasPrefix(line, "Tags:") {

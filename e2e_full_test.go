@@ -307,10 +307,10 @@ func TestAllCommands(t *testing.T) {
 			t.Errorf("Expected claim message: %s", stdout)
 		}
 
-		// Verify in list
+		// Verify in list (now includes PPID: [claimed:test-bot@<pid>])
 		stdout, _, _ = runner.Run("list")
-		if !strings.Contains(stdout, "claimed by test-bot") {
-			t.Errorf("Claim should appear in list: %s", stdout)
+		if !strings.Contains(stdout, "[claimed:test-bot@") {
+			t.Errorf("Claim should appear in list with PPID: %s", stdout)
 		}
 	})
 

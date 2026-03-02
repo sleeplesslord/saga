@@ -22,6 +22,9 @@ var claimCmd = &cobra.Command{
 Claims expire after 24 hours by default. Use --duration to set custom time.
 Use --agent to specify who is claiming (defaults to USER env var).
 
+The claim ID includes the parent process ID (PPID) for unique session
+identification: "agent@ppid" (e.g., "andreas@12345" or "claude@67890").
+
 Examples:
   sg claim abc123                    # Claim for 24h
   sg claim abc123 --duration 4h      # Claim for 4 hours
@@ -38,6 +41,8 @@ Examples:
 				agent = "unknown"
 			}
 		}
+		// Append PPID for unique session identification
+		agent = fmt.Sprintf("%s@%d", agent, os.Getppid())
 
 		st, err := store.New(store.DefaultPath())
 		if err != nil {
