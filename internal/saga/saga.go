@@ -1,6 +1,8 @@
 package saga
 
 import (
+	"crypto/rand"
+	"encoding/binary"
 	"time"
 )
 
@@ -254,16 +256,20 @@ func (s *Saga) SetStatus(status Status) {
 	s.AddHistory("status_changed", string(oldStatus)+" -> "+string(status))
 }
 
-// generateID creates a short unique identifier
+// generateID creates a short unique identifier using cryptographic randomness.
+// Produces 6-character base36 IDs (36^6 ≈ 2.2 billion combinations).
 func generateID() string {
-	// Simple implementation: first 4 chars of timestamp hash
-	// Replace with better solution later
 	const alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
-	now := time.Now().UnixNano()
-	result := make([]byte, 4)
-	for i := 0; i < 4; i++ {
-		result[i] = alphabet[now%int64(len(alphabet))]
-		now /= int64(len(alphabet))
+	var buf [8]byte
+	if _, err := rand.Read(buf[:]); err != nil {
+		// Fallback: mix timestamp with whatever entropy is available
+		binary.LittleEndian.PutUint64(buf[:], uint64(time.Now().UnixNano()))
+	}
+	n := binary.LittleEndian.Uint64(buf[:])
+	result := make([]byte, 6)
+	for i := range result {
+		result[i] = alphabet[n%uint64(len(alphabet))]
+		n /= uint64(len(alphabet))
 	}
 	return string(result)
 }

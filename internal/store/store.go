@@ -303,10 +303,19 @@ func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
 	return sagas, scanner.Err()
 }
 
-// Save appends a saga to storage (default: local if in project, else global)
+// Save appends a saga to storage (default: local if in project, else global).
+// Returns an error if a saga with the same ID already exists.
 func (s *Store) Save(sg *saga.Saga, scope ...Scope) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Check for duplicate ID across all scopes
+	existing, _ := s.loadAllUnlocked()
+	for _, e := range existing {
+		if e.ID == sg.ID {
+			return fmt.Errorf("duplicate saga ID: %s", sg.ID)
+		}
+	}
 
 	// Determine scope
 	targetScope := ScopeGlobal
