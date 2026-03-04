@@ -343,6 +343,61 @@ func TestAllCommands(t *testing.T) {
 		_ = stdout
 	})
 
+	t.Run("Ready", func(t *testing.T) {
+		// Test that sg ready respects parent blocking
+		// Create a blocked parent with a child
+		stdout, _, err := runner.Run("new", "Blocked parent saga")
+		if err != nil {
+			t.Fatalf("Failed to create parent saga: %v", err)
+		}
+		// Extract parent ID from output
+		parentID := ""
+		if strings.Contains(stdout, "Created saga") {
+			// Get the ID from the list
+			parentID = runner.getSagaID("Blocked parent saga")
+		}
+
+		// Create a dependency that blocks the parent
+		stdout, _, err = runner.Run("new", "Blocking dependency saga")
+		if err != nil {
+			t.Fatalf("Failed to create blocking saga: %v", err)
+		}
+		blockerID := runner.getSagaID("Blocking dependency saga")
+
+		// Make parent depend on blocker
+		_, _, err = runner.Run("depend", parentID, "add", blockerID)
+		if err != nil {
+			t.Fatalf("Failed to add dependency: %v", err)
+		}
+
+		// Create child of blocked parent
+		_, _, err = runner.Run("new", "Child of blocked parent", "--parent", parentID)
+		if err != nil {
+			t.Fatalf("Failed to create child saga: %v", err)
+		}
+
+		// Now check sg ready - child should NOT appear because parent is blocked
+		stdout, _, err = runner.Run("ready")
+		if err != nil {
+			t.Fatalf("Failed to run ready command: %v", err)
+		}
+
+		// Child should not be in ready list because parent is blocked
+		if strings.Contains(stdout, "Child of blocked parent") {
+			t.Errorf("Child of blocked parent should not appear in ready list: %s", stdout)
+		}
+
+		// But the blocker should appear (it has no dependencies)
+		if !strings.Contains(stdout, "Blocking dependency saga") {
+			t.Errorf("Blocking dependency saga should appear in ready list: %s", stdout)
+		}
+
+		// Clean up - complete blocker
+		_, _, _ = runner.Run("done", blockerID)
+		// Now parent should be unblocked, complete it
+		_, _, _ = runner.Run("done", parentID)
+	})
+
 	t.Run("Complete", func(t *testing.T) {
 		// Complete child first
 		childID := ""

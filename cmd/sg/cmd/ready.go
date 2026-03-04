@@ -107,6 +107,22 @@ func isReady(sg *saga.Saga, st *store.Store) bool {
 		return false
 	}
 
+	// Check if parent is blocked
+	if sg.ParentID != "" {
+		parent, err := st.GetByID(sg.ParentID)
+		if err == nil && parent != nil {
+			// Parent must be active
+			if parent.Status != saga.StatusActive {
+				return false
+			}
+			// Parent must not have incomplete dependencies
+			hasIncompleteDeps, _, err := st.HasIncompleteDependencies(parent.ID)
+			if err == nil && hasIncompleteDeps {
+				return false
+			}
+		}
+	}
+
 	return true
 }
 
