@@ -335,50 +335,52 @@ func suggestRunes(sg *saga.Saga) []BriefRune {
 		return nil
 	}
 
-	// Search runes with keywords
-	var suggested []BriefRune
+	// Filter out short keywords and build search args
+	var searchArgs []string
 	for _, kw := range keywords {
-		if len(kw) < 3 {
-			continue // Skip short words
+		if len(kw) >= 3 {
+			searchArgs = append(searchArgs, kw)
 		}
-		runesCmd := exec.Command("runes", "search", "--json", kw)
-		output, err := runesCmd.Output()
-		if err != nil || len(output) == 0 {
-			continue
-		}
+	}
+	if len(searchArgs) == 0 {
+		return nil
+	}
 
-		// Parse JSON output
-		var result struct {
-			Queries []struct {
-				Query   string `json:"query"`
-				Results []struct {
-					ID    string `json:"id"`
-					Title string `json:"title"`
-				} `json:"results"`
-			} `json:"queries"`
-		}
-		if err := json.Unmarshal(output, &result); err != nil {
-			continue
-		}
+	// Batch search: runes search --json "kw1" "kw2" "kw3" ...
+	args := append([]string{"search", "--json"}, searchArgs...)
+	runesCmd := exec.Command("runes", args...)
+	output, err := runesCmd.Output()
+	if err != nil || len(output) == 0 {
+		return nil
+	}
 
-		for _, q := range result.Queries {
-			for _, r := range q.Results {
-				// Check if already added
-				exists := false
-				for _, s := range suggested {
-					if s.ID == r.ID {
-						exists = true
-						break
-					}
-				}
-				if !exists {
-					suggested = append(suggested, BriefRune{
-						ID:    r.ID,
-						Title: r.Title,
-					})
-					if len(suggested) >= 5 {
-						return suggested // Max 5 suggestions
-					}
+	// Parse JSON output
+	var result struct {
+		Queries []struct {
+			Query   string `json:"query"`
+			Results []struct {
+				ID    string `json:"id"`
+				Title string `json:"title"`
+			} `json:"results"`
+		} `json:"queries"`
+	}
+	if err := json.Unmarshal(output, &result); err != nil {
+		return nil
+	}
+
+	// Collect unique results across all queries
+	var suggested []BriefRune
+	seen := make(map[string]bool)
+	for _, q := range result.Queries {
+		for _, r := range q.Results {
+			if !seen[r.ID] {
+				seen[r.ID] = true
+				suggested = append(suggested, BriefRune{
+					ID:    r.ID,
+					Title: r.Title,
+				})
+				if len(suggested) >= 5 {
+					return suggested // Max 5 suggestions
 				}
 			}
 		}
