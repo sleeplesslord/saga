@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hbn/saga/internal/store"
+	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
 

@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/hbn/saga/internal/saga"
-	"github.com/hbn/saga/internal/store"
+	"github.com/sleeplesslord/saga/internal/saga"
+	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
 

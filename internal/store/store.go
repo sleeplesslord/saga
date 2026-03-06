@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hbn/saga/internal/saga"
+	"github.com/sleeplesslord/saga/internal/saga"
 )
 
 // Scope defines where sagas are stored
