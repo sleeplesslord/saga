@@ -37,6 +37,7 @@ type Saga struct {
 	RelatedTo   []string  `json:"related_to,omitempty"` // Soft relationships (informational)
 	ClaimedBy   string    `json:"claimed_by,omitempty"`
 	ClaimedAt   time.Time `json:"claimed_at,omitempty"`
+	Deadline    string    `json:"deadline,omitempty"` // YYYYMMDD format
 	// IndentLevel is computed, not stored
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`

@@ -197,6 +197,9 @@ func printContext(ctx *SagaContext) {
 	if len(sg.Labels) > 0 {
 		fmt.Printf("Labels:      %s\n", strings.Join(sg.Labels, ", "))
 	}
+	if sg.Deadline != "" {
+		fmt.Printf("Deadline:    %s\n", sg.Deadline)
+	}
 	fmt.Println()
 
 	// Hierarchy (only if has parent or children)

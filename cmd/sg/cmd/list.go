@@ -129,6 +129,11 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 	// Updated time
 	metaParts = append(metaParts, sg.UpdatedAt.Format("Jan 02 15:04"))
 	
+	// Deadline
+	if sg.Deadline != "" {
+		metaParts = append(metaParts, "[due:"+sg.Deadline+"]")
+	}
+
 	// Labels (compact)
 	if len(sg.Labels) > 0 {
 		labelStr := strings.Join(sg.Labels, ",")
@@ -137,7 +142,7 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		}
 		metaParts = append(metaParts, "["+labelStr+"]")
 	}
-	
+
 	// Claim status (compact)
 	if sg.IsClaimed() {
 		metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+"]")

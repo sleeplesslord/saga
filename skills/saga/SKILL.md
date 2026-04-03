@@ -36,6 +36,7 @@ sg status <id>                     # Brief status
 sg new "title"                     # Create saga
 sg new "title" --parent <id>     # Create sub-saga
 sg new "title" --label bug --priority high --desc "details"
+sg new "title" --deadline 20250415 # Set deadline (YYYYMMDD)
 sg done <id>                       # Mark complete
 sg done <id> --reason "message"    # Mark done with reason
 sg done <id> --force               # Force completion
@@ -45,6 +46,8 @@ sg log <id> --file notes.md       # Log from file
 # Modify
 sg edit <id> --title "new title"   # Update title
 sg edit <id> --desc "new desc"     # Update description
+sg edit <id> --deadline 20250415   # Set/edit deadline
+sg edit <id> --deadline ""         # Clear deadline
 sg label <id> add|remove <label>
 sg priority <id> high|normal|low
 sg depend <id> add|remove <target>

@@ -13,6 +13,7 @@ var (
 	labels      []string
 	priority    string
 	description string
+	deadline    string
 )
 
 var newCmd = &cobra.Command{
@@ -86,6 +87,12 @@ Examples:
 			sg.Description = description
 		}
 
+		// Set deadline if specified
+		if deadline != "" {
+			sg.Deadline = deadline
+			fmt.Printf("Deadline: %s\n", deadline)
+		}
+
 		if err := st.Save(sg); err != nil {
 			return fmt.Errorf("saving saga: %w", err)
 		}
@@ -99,5 +106,6 @@ func init() {
 	newCmd.Flags().StringArrayVar(&labels, "label", nil, "Add label (can specify multiple)")
 	newCmd.Flags().StringVar(&priority, "priority", "", "Set priority (high, normal, low)")
 	newCmd.Flags().StringVar(&description, "desc", "", "Add description")
+	newCmd.Flags().StringVar(&deadline, "deadline", "", "Set deadline (YYYYMMDD format)")
 	rootCmd.AddCommand(newCmd)
 }

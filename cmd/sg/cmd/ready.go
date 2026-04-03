@@ -49,8 +49,21 @@ Examples:
 			return nil
 		}
 
-		// Sort by priority then updated
+		// Sort by deadline (closest first), then priority, then updated
 		sort.Slice(ready, func(i, j int) bool {
+			// Deadline sorting (empty deadlines go last)
+			hi, hj := ready[i].Deadline, ready[j].Deadline
+			if hi != "" && hj == "" {
+				return true
+			}
+			if hi == "" && hj != "" {
+				return false
+			}
+			if hi != "" && hj != "" && hi != hj {
+				return hi < hj // Earlier deadline first (YYYYMMDD sorts lexicographically)
+			}
+
+			// Then by priority
 			priorityOrder := map[saga.Priority]int{
 				saga.PriorityHigh:   0,
 				saga.PriorityNormal: 1,
@@ -76,7 +89,12 @@ Examples:
 				labelStr = fmt.Sprintf(" [%s]", strings.Join(sg.Labels, ","))
 			}
 
-			fmt.Printf("  %-6s %s%s%s\n", sg.ID, sg.Title, priorityStr, labelStr)
+			deadlineStr := ""
+			if sg.Deadline != "" {
+				deadlineStr = fmt.Sprintf(" [due:%s]", sg.Deadline)
+			}
+
+			fmt.Printf("  %-6s %s%s%s%s\n", sg.ID, sg.Title, priorityStr, labelStr, deadlineStr)
 		}
 
 		return nil

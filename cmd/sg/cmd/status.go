@@ -48,6 +48,9 @@ var statusCmd = &cobra.Command{
 		if sg.IsClaimed() {
 			fmt.Printf("Claimed by: %s (expires %s)\n", sg.ClaimedBy, sg.ClaimExpiry().Format("Jan 02 15:04"))
 		}
+		if sg.Deadline != "" {
+			fmt.Printf("Deadline: %s\n", sg.Deadline)
+		}
 		fmt.Printf("Created: %s\n", sg.CreatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Printf("Updated: %s\n", sg.UpdatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Println()
