@@ -44,7 +44,7 @@ Examples:
 				return parentNotFound(parentID)
 			}
 
-			if parent.Status == saga.StatusDone {
+		if parent.Status == saga.StatusDone || parent.Status == saga.StatusWontDo {
 				return parentDone(parentID)
 			}
 

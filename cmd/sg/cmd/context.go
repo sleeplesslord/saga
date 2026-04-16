@@ -75,7 +75,7 @@ Examples:
 					ID:       dep.ID,
 					Title:    dep.Title,
 					Status:   dep.Status,
-					Blocking: dep.Status != saga.StatusDone,
+					Blocking: dep.Status != saga.StatusDone && dep.Status != saga.StatusWontDo,
 				})
 			} else {
 				ctx.Dependencies = append(ctx.Dependencies, DependencyInfo{
@@ -189,7 +189,9 @@ func printContext(ctx *SagaContext) {
 	// Basic info
 	fmt.Printf("Title:       %s\n", sg.Title)
 	if sg.Description != "" {
-		fmt.Printf("Description: %s\n", sg.Description)
+		// Fix double-escaped newlines from shell input
+		desc := strings.ReplaceAll(sg.Description, "\\n", "\n")
+		fmt.Printf("Description: %s\n", desc)
 	}
 	if sg.Priority != saga.PriorityNormal {
 		fmt.Printf("Priority:    %s\n", sg.Priority)
@@ -227,6 +229,9 @@ func printContext(ctx *SagaContext) {
 		blocking := 0
 		for _, dep := range ctx.Dependencies {
 			status := "✓ done"
+			if dep.Status == saga.StatusWontDo {
+				status = "⊘ wontdo"
+			}
 			if dep.Blocking {
 				status = "✗ BLOCKING"
 				blocking++
@@ -314,7 +319,7 @@ func printContext(ctx *SagaContext) {
 }
 
 func canComplete(ctx *SagaContext) bool {
-	if ctx.Saga.Status == saga.StatusDone {
+	if ctx.Saga.Status == saga.StatusDone || ctx.Saga.Status == saga.StatusWontDo {
 		return true
 	}
 	for _, dep := range ctx.Dependencies {
@@ -323,7 +328,7 @@ func canComplete(ctx *SagaContext) bool {
 		}
 	}
 	for _, child := range ctx.Children {
-		if child.Status != saga.StatusDone {
+		if child.Status != saga.StatusDone && child.Status != saga.StatusWontDo {
 			return false
 		}
 	}

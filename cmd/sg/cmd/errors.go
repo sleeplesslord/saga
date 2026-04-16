@@ -27,7 +27,7 @@ To create a root saga (no parent):
 }
 
 func parentDone(id string) error {
-	return fmt.Errorf(`cannot create sub-saga: parent "%s" is already done
+	return fmt.Errorf(`cannot create sub-saga: parent "%s" is already done or won't-do
 
 Active parents:
   sg list --status active
@@ -87,7 +87,7 @@ Examples:
 func invalidStatus(s string) error {
 	return fmt.Errorf(`invalid status "%s"
 
-Valid statuses: active, paused, done`, s)
+Valid statuses: active, paused, done, wontdo`, s)
 }
 
 func storeError(err error) error {

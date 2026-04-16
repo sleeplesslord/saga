@@ -13,6 +13,7 @@ const (
 	StatusActive Status = "active"
 	StatusPaused Status = "paused"
 	StatusDone   Status = "done"
+	StatusWontDo Status = "wontdo"
 )
 
 // Priority represents the priority level of a saga

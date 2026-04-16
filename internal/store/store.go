@@ -515,7 +515,7 @@ func (s *Store) GetChildren(parentID string) ([]*saga.Saga, error) {
 	return s.indexByParent[parentID], nil
 }
 
-// HasActiveChildren returns true if saga has any children that aren't done
+// HasActiveChildren returns true if saga has any children that aren't in a terminal state
 func (s *Store) HasActiveChildren(parentID string) (bool, error) {
 	children, err := s.GetChildren(parentID)
 	if err != nil {
@@ -523,12 +523,17 @@ func (s *Store) HasActiveChildren(parentID string) (bool, error) {
 	}
 
 	for _, child := range children {
-		if child.Status != saga.StatusDone {
+		if !isTerminalStatus(child.Status) {
 			return true, nil
 		}
 	}
 
 	return false, nil
+}
+
+// isTerminalStatus returns true if the status is a terminal state (done or wontdo)
+func isTerminalStatus(status saga.Status) bool {
+	return status == saga.StatusDone || status == saga.StatusWontDo
 }
 
 // GetNextChildID returns the next available child ID for a parent
@@ -569,7 +574,7 @@ func (s *Store) HasIncompleteDependencies(sagaID string) (bool, []string, error)
 			incomplete = append(incomplete, depID)
 			continue
 		}
-		if dep.Status != saga.StatusDone {
+		if !isTerminalStatus(dep.Status) {
 			incomplete = append(incomplete, depID)
 		}
 	}
