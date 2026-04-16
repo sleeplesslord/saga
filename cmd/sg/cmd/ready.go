@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -10,12 +11,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var readyTake bool
+
 var readyCmd = &cobra.Command{
 	Use:   "ready",
 	Short: "List sagas ready to work on",
-	Long: `Show active sagas that are not blocked by dependencies, children, or claims.
+	Long: `Show active sagas that are not blocked by dependencies, children, or claims from others.
 
 This helps you find what you can start working on right now.
+Sagas claimed by you are included; sagas claimed by others are excluded.
+
+Sort order: deadline (soonest first), then priority (high first), then recently updated.
 
 Examples:
   sg ready              # List all ready sagas
@@ -39,10 +45,12 @@ Examples:
 			return fmt.Errorf("loading sagas: %w", err)
 		}
 
+		agent := resolveAgentName()
+
 		// Find ready sagas
 		var ready []*saga.Saga
 		for _, sg := range sagas {
-			if !isReady(sg, st) {
+			if !isReady(sg, st, agent) {
 				continue
 			}
 			ready = append(ready, sg)
@@ -58,31 +66,19 @@ Examples:
 		}
 
 		// Sort by deadline (closest first), then priority, then updated
-		sort.Slice(ready, func(i, j int) bool {
-			// Deadline sorting (empty deadlines go last)
-			hi, hj := ready[i].Deadline, ready[j].Deadline
-			if hi != "" && hj == "" {
-				return true
-			}
-			if hi == "" && hj != "" {
-				return false
-			}
-			if hi != "" && hj != "" && hi != hj {
-				return hi < hj // Earlier deadline first (YYYYMMDD sorts lexicographically)
-			}
+		sortByDeadlinePriorityUpdated(ready)
 
-			// Then by priority
-			priorityOrder := map[saga.Priority]int{
-				saga.PriorityHigh:   0,
-				saga.PriorityNormal: 1,
-				saga.PriorityLow:    2,
+		// --take: claim the first ready saga
+		if readyTake {
+			sg := ready[0]
+			claimAgent := fmt.Sprintf("%s@%d", agent, os.Getppid())
+			sg.Claim(claimAgent)
+			if err := st.Update(sg); err != nil {
+				return fmt.Errorf("claiming saga: %w", err)
 			}
-			pi, pj := priorityOrder[ready[i].Priority], priorityOrder[ready[j].Priority]
-			if pi != pj {
-				return pi < pj
-			}
-			return ready[i].UpdatedAt.After(ready[j].UpdatedAt)
-		})
+			fmt.Printf("Claimed saga %s: %s\n", sg.ID, sg.Title)
+			return nil
+		}
 
 		fmt.Printf("Found %d saga(s) ready to work on:\n\n", len(ready))
 
@@ -102,23 +98,39 @@ Examples:
 				deadlineStr = fmt.Sprintf(" [due:%s]", sg.Deadline)
 			}
 
-			fmt.Printf("  %-6s %s%s%s%s\n", sg.ID, sg.Title, priorityStr, labelStr, deadlineStr)
+			claimStr := ""
+			if sg.IsClaimed() {
+				// Show "me" for own claims
+				claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
+				agentParts := strings.SplitN(agent, "@", 2)
+				if claimParts[0] == agentParts[0] {
+					claimStr = " [mine]"
+				} else {
+					claimStr = fmt.Sprintf(" [claimed:%s]", sg.ClaimedBy)
+				}
+			}
+
+			fmt.Printf("  %-6s %s%s%s%s%s\n", sg.ID, sg.Title, priorityStr, labelStr, deadlineStr, claimStr)
 		}
 
 		return nil
 	},
 }
 
-// isReady checks if a saga can be worked on
-func isReady(sg *saga.Saga, st *store.Store) bool {
+// isReady checks if a saga can be worked on by the given agent
+func isReady(sg *saga.Saga, st *store.Store, agent string) bool {
 	// Must be active
 	if sg.Status != saga.StatusActive {
 		return false
 	}
 
-	// Must not be claimed
+	// Exclude claimed by others (but allow own claims)
 	if sg.IsClaimed() {
-		return false
+		claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
+		agentParts := strings.SplitN(agent, "@", 2)
+		if claimParts[0] != agentParts[0] {
+			return false
+		}
 	}
 
 	// Check for incomplete dependencies
@@ -152,6 +164,39 @@ func isReady(sg *saga.Saga, st *store.Store) bool {
 	return true
 }
 
+// sortByDeadlinePriorityUpdated sorts sagas by deadline (soonest first),
+// then priority (high first), then recently updated
+func sortByDeadlinePriorityUpdated(sagas []*saga.Saga) {
+	priorityOrder := map[saga.Priority]int{
+		saga.PriorityHigh:   0,
+		saga.PriorityNormal: 1,
+		saga.PriorityLow:    2,
+	}
+
+	sort.Slice(sagas, func(i, j int) bool {
+		// Deadline sorting (empty deadlines go last)
+		di, dj := sagas[i].Deadline, sagas[j].Deadline
+		if di != "" && dj == "" {
+			return true
+		}
+		if di == "" && dj != "" {
+			return false
+		}
+		if di != "" && dj != "" && di != dj {
+			return di < dj // Earlier deadline first (YYYYMMDD sorts lexicographically)
+		}
+
+		// Then by priority
+		pi, pj := priorityOrder[sagas[i].Priority], priorityOrder[sagas[j].Priority]
+		if pi != pj {
+			return pi < pj
+		}
+
+		return sagas[i].UpdatedAt.After(sagas[j].UpdatedAt)
+	})
+}
+
 func init() {
+	readyCmd.Flags().BoolVar(&readyTake, "take", false, "Claim the first ready saga")
 	rootCmd.AddCommand(readyCmd)
 }

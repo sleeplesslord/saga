@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
@@ -63,19 +62,8 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			return nil
 		}
 
-		// Sort by priority (high > normal > low), then by updated time
-		sort.Slice(sagas, func(i, j int) bool {
-			priorityOrder := map[saga.Priority]int{
-				saga.PriorityHigh:   0,
-				saga.PriorityNormal: 1,
-				saga.PriorityLow:    2,
-			}
-			pi, pj := priorityOrder[sagas[i].Priority], priorityOrder[sagas[j].Priority]
-			if pi != pj {
-				return pi < pj
-			}
-			return sagas[i].UpdatedAt.After(sagas[j].UpdatedAt)
-		})
+		// Sort by deadline (soonest first), then priority (high first), then updated
+		sortByDeadlinePriorityUpdated(sagas)
 
 		// Show scope info
 		scopeDesc := "global"
