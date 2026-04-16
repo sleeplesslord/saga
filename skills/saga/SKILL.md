@@ -57,6 +57,10 @@ sg wontdo <id> [--id ...] --reason "why"  # Abandon/reject/obsolete
 sg wontdo <id> --cascade           # Mark all active sub-sagas as wontdo
 sg wontdo <id> --quiet             # Suppress runes hint
 
+# Reopen
+sg reopen <id>                     # Reopen a done saga (sets back to active)
+sg reopen <id> --reason "why"     # Reopen with reason logged in history
+
 # Claiming
 sg claim <id> [<id> ...]           # Claim saga(s) for your session
 sg claim <id> --duration 4h        # Custom claim duration
@@ -93,7 +97,7 @@ sg config --scope global --claim-duration 4h  # Set global default
    ```bash
    sg context <id> --format json
    ```
-   - Check status (if done/wontdo, ask user)
+   - Check status (if done, can `sg reopen`; if wontdo, ask user)
    - Check dependencies (wontdo = ⊘ non-blocking, incomplete = ✗ BLOCKING)
    - Check parent/child relationships
    - Check claim status (yours = [mine], other session = claimed by other)
@@ -186,6 +190,16 @@ sg wontdo <id> --quiet               # Suppress runes hint
 ```
 
 Wontdo is a terminal state (like done) but semantically distinct. It is non-blocking in dependency checks (shown as ⊘ wontdo).
+
+### Reopening Completed Work
+
+For sagas that were marked done but need more work:
+```bash
+sg reopen <id>                     # Sets status back to active
+sg reopen <id> --reason "Bug found in implementation"
+```
+
+Only `done` sagas can be reopened (not `wontdo`). The reason is logged in history.
 
 ## Claim System
 
