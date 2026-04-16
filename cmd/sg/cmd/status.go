@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -27,19 +26,18 @@ var statusCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Saga: %s (%s)\n", sg.ID, sg.Status)
-		fmt.Printf("Title: %s\n", sg.Title)
+		printField("Title:", sg.Title, 0)
 		if sg.Description != "" {
-			desc := strings.ReplaceAll(sg.Description, "\\n", "\n")
-			fmt.Printf("Description: %s\n", desc)
+			printField("Description:", formatDescription(sg.Description), 0)
 		}
 		if sg.IsSubSaga() {
 			fmt.Printf("Parent: %s\n", sg.ParentID)
 		}
 		if sg.Priority != saga.PriorityNormal {
-			fmt.Printf("Priority: %s\n", sg.Priority)
+			printField("Priority:", string(sg.Priority), 0)
 		}
 		if len(sg.Labels) > 0 {
-			fmt.Printf("Labels: %v\n", sg.Labels)
+			printField("Labels:", fmt.Sprintf("%v", sg.Labels), 0)
 		}
 		if len(sg.DependsOn) > 0 {
 			fmt.Printf("Depends on: %v\n", sg.DependsOn)
@@ -51,25 +49,14 @@ var statusCmd = &cobra.Command{
 			fmt.Printf("Claimed by: %s (expires %s)\n", sg.ClaimedBy, sg.ClaimExpiry().Format("Jan 02 15:04"))
 		}
 		if sg.Deadline != "" {
-			fmt.Printf("Deadline: %s\n", sg.Deadline)
+			printField("Deadline:", sg.Deadline, 0)
 		}
 		fmt.Printf("Created: %s\n", sg.CreatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Printf("Updated: %s\n", sg.UpdatedAt.Format("Jan 02, 2006 15:04"))
 		fmt.Println()
 		fmt.Println("Recent history:")
 
-		start := len(sg.History) - 5
-		if start < 0 {
-			start = 0
-		}
-		for i := len(sg.History) - 1; i >= start; i-- {
-			entry := sg.History[i]
-			fmt.Printf("  %s | %s", entry.Timestamp.Format("15:04"), entry.Action)
-			if entry.Note != "" {
-				fmt.Printf(" - %s", entry.Note)
-			}
-			fmt.Println()
-		}
+		printHistoryEntries(sg.History, 5, false)
 
 		return nil
 	},

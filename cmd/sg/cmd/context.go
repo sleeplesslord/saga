@@ -169,15 +169,6 @@ type DependencyInfo struct {
 	Blocking bool        `json:"blocking"`
 }
 
-// repeat returns a string repeated n times
-func repeat(s string, n int) string {
-	var result strings.Builder
-	for i := 0; i < n; i++ {
-		result.WriteString(s)
-	}
-	return result.String()
-}
-
 func printContext(ctx *SagaContext) {
 	sg := ctx.Saga
 
@@ -187,21 +178,8 @@ func printContext(ctx *SagaContext) {
 	fmt.Println()
 
 	// Basic info
-	fmt.Printf("Title:       %s\n", sg.Title)
-	if sg.Description != "" {
-		// Fix double-escaped newlines from shell input
-		desc := strings.ReplaceAll(sg.Description, "\\n", "\n")
-		fmt.Printf("Description: %s\n", desc)
-	}
-	if sg.Priority != saga.PriorityNormal {
-		fmt.Printf("Priority:    %s\n", sg.Priority)
-	}
-	if len(sg.Labels) > 0 {
-		fmt.Printf("Labels:      %s\n", strings.Join(sg.Labels, ", "))
-	}
-	if sg.Deadline != "" {
-		fmt.Printf("Deadline:    %s\n", sg.Deadline)
-	}
+	printField("Title:", sg.Title, 13)
+	printSagaFields(sg, 13, true)
 	fmt.Println()
 
 	// Hierarchy (only if has parent or children)
@@ -293,18 +271,7 @@ func printContext(ctx *SagaContext) {
 	fmt.Println(repeat("─", 40))
 	fmt.Println("RECENT HISTORY")
 	fmt.Println(repeat("─", 40))
-	start := len(sg.History) - 10
-	if start < 0 {
-		start = 0
-	}
-	for i := len(sg.History) - 1; i >= start; i-- {
-		entry := sg.History[i]
-		fmt.Printf("  %s | %s", entry.Timestamp.Format("Jan 02 15:04"), entry.Action)
-		if entry.Note != "" {
-			fmt.Printf(" - %s", entry.Note)
-		}
-		fmt.Println()
-	}
+	printHistoryEntries(sg.History, 10, true)
 	fmt.Println()
 
 	// Summary
