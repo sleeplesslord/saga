@@ -67,9 +67,7 @@ Examples:
 						if err := st.Update(child); err != nil {
 							return fmt.Errorf("updating child %s: %w", child.ID, err)
 						}
-						if !wontdoQuiet && isTerminal() {
-							fmt.Printf("Marked sub-saga %s as wontdo\n", child.ID)
-						}
+						fmt.Printf("Marked sub-saga %s as wontdo\n", child.ID)
 					}
 				}
 			}
@@ -85,16 +83,14 @@ Examples:
 				return fmt.Errorf("updating saga: %w", err)
 			}
 
-			if !wontdoQuiet && isTerminal() {
-				fmt.Printf("Marked saga %s as wontdo\n", sg.ID)
+			fmt.Printf("Marked saga %s as wontdo\n", sg.ID)
 
-				// Hint about runes if installed
-				if isRunesInstalled() {
-					fmt.Println()
-					fmt.Println("💡 This saga involved problem-solving. Capture the knowledge?")
-					fmt.Println("   runes add \"<title>\" --problem \"...\" --solution \"...\" --saga " + sg.ID)
-					fmt.Println("   runes edit <id> --learned \"<insight>\"")
-				}
+			// Hint about runes if installed (only in TTY, suppressible with --quiet)
+			if !wontdoQuiet && isTerminal() && isRunesInstalled() {
+				fmt.Println()
+				fmt.Println("💡 This saga involved problem-solving. Capture the knowledge?")
+				fmt.Println("   runes add \"<title>\" --problem \"...\" --solution \"...\" --saga " + sg.ID)
+				fmt.Println("   runes edit <id> --learned \"<insight>\"")
 			}
 		}
 
