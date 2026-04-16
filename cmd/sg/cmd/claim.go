@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	claimAgent    string
-	claimDuration time.Duration
+	claimAgent         string
+	claimDurationFlag  string
+	claimDurationSet   bool
 )
 
 var claimCmd = &cobra.Command{
@@ -19,8 +20,8 @@ var claimCmd = &cobra.Command{
 	Short: "Claim saga for work",
 	Long: `Mark a saga as claimed by you to prevent others from working on it.
 
-Claims expire after 24 hours by default. Use --duration to set custom time.
-Use --agent to specify who is claiming (defaults to USER env var).
+Claim duration defaults to the configured value (see .saga/config.json),
+falling back to 24h if not configured. Use --duration to override.
 
 The claim ID includes the parent process ID (PPID) for unique session
 identification: "agent@ppid" (e.g., "andreas@12345" or "claude@67890").
@@ -28,7 +29,7 @@ identification: "agent@ppid" (e.g., "andreas@12345" or "claude@67890").
 Multiple IDs can be provided to claim several sagas at once.
 
 Examples:
-  sg claim abc123                    # Claim for 24h
+  sg claim abc123                    # Claim for configured/default duration
   sg claim abc123 def456 ghi789      # Claim multiple
   sg claim abc123 --duration 4h      # Claim for 4 hours
   sg claim abc123 --agent claude     # Claim as specific agent`,
@@ -52,9 +53,16 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		duration := "24h"
-		if claimDuration > 0 {
-			duration = claimDuration.String()
+		// Resolve claim duration: flag > config > default (24h)
+		var duration time.Duration
+		if claimDurationSet {
+			d, err := time.ParseDuration(claimDurationFlag)
+			if err != nil {
+				return fmt.Errorf("invalid duration %q: %w", claimDurationFlag, err)
+			}
+			duration = d
+		} else {
+			duration = st.ClaimDuration()
 		}
 
 		for _, id := range ids {
@@ -63,14 +71,14 @@ Examples:
 				return sagaNotFound(id)
 			}
 
-			// Check if already claimed
-			if sg.IsClaimed() && sg.ClaimedBy != agent {
+			// Check if already claimed by a different session
+			if sg.IsClaimedWithDuration(duration) && sg.ClaimedBy != agent {
 				return fmt.Errorf("saga %s is already claimed by %s (expires %s)",
-					id, sg.ClaimedBy, sg.ClaimExpiry().Format("15:04"))
+					id, sg.ClaimedBy, sg.ClaimExpiryWithDuration(duration).Format("15:04"))
 			}
 
 			// Claim it
-			sg.Claim(agent)
+			sg.ClaimWithDuration(agent, duration)
 			if err := st.Update(sg); err != nil {
 				return fmt.Errorf("updating saga: %w", err)
 			}
@@ -124,7 +132,18 @@ Example:
 
 func init() {
 	claimCmd.Flags().StringVar(&claimAgent, "agent", "", "Agent name (default: $USER)")
-	claimCmd.Flags().DurationVar(&claimDuration, "duration", 24*time.Hour, "Claim duration")
+	claimCmd.Flags().StringVar(&claimDurationFlag, "duration", "24h", "Claim duration (e.g. 4h, 30m, 72h). Default: configured or 24h")
+	// Track whether --duration was explicitly set
+	claimCmd.Flags().Lookup("duration").NoOptDefVal = ""
+	claimCmd.Flags().Lookup("duration").Changed = false
+	_ = claimDurationSet // will be set after flag parse via hook
+
+	// Post-parse hook to detect if --duration was explicitly provided
+	claimCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		claimDurationSet = cmd.Flags().Changed("duration")
+		return nil
+	}
+
 	rootCmd.AddCommand(claimCmd)
 	rootCmd.AddCommand(unclaimCmd)
 }

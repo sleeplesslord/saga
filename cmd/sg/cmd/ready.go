@@ -5,6 +5,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -47,10 +48,13 @@ Examples:
 
 		agent := resolveAgentName()
 
+		// Load claim duration from config
+		claimDuration := st.ClaimDuration()
+
 		// Find ready sagas
 		var ready []*saga.Saga
 		for _, sg := range sagas {
-			if !isReady(sg, st, agent) {
+			if !isReady(sg, st, agent, claimDuration) {
 				continue
 			}
 			ready = append(ready, sg)
@@ -72,7 +76,7 @@ Examples:
 		if readyTake {
 			sg := ready[0]
 			claimAgent := fmt.Sprintf("%s@%d", agent, os.Getppid())
-			sg.Claim(claimAgent)
+			sg.ClaimWithDuration(claimAgent, claimDuration)
 			if err := st.Update(sg); err != nil {
 				return fmt.Errorf("claiming saga: %w", err)
 			}
@@ -99,7 +103,7 @@ Examples:
 			}
 
 			claimStr := ""
-			if sg.IsClaimed() {
+			if sg.IsClaimedWithDuration(claimDuration) {
 				// Show "me" for same-session claims (ppid match)
 				claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
 				currentPPID := fmt.Sprintf("%d", os.Getppid())
@@ -118,7 +122,7 @@ Examples:
 }
 
 // isReady checks if a saga can be worked on by the current process session
-func isReady(sg *saga.Saga, st *store.Store, agent string) bool {
+func isReady(sg *saga.Saga, st *store.Store, agent string, claimDuration time.Duration) bool {
 	// Must be active
 	if sg.Status != saga.StatusActive {
 		return false
@@ -127,7 +131,7 @@ func isReady(sg *saga.Saga, st *store.Store, agent string) bool {
 	// Exclude claimed by other sessions (ppid comparison)
 	// Same ppid = same shell/agent session = allowed
 	// Different ppid = different session = excluded
-	if sg.IsClaimed() {
+	if sg.IsClaimedWithDuration(claimDuration) {
 		claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
 		currentPPID := fmt.Sprintf("%d", os.Getppid())
 		if len(claimParts) == 2 && claimParts[1] != currentPPID {

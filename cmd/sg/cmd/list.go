@@ -65,6 +65,9 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 		// Sort by deadline (soonest first), then priority (high first), then updated
 		sortByDeadlinePriorityUpdated(sagas)
 
+		// Load claim duration from config
+		claimDuration := st.ClaimDuration()
+
 		// Show scope info
 		scopeDesc := "global"
 		if len(scopes) == 2 {
@@ -106,7 +109,7 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			if labelFilter != "" && !sg.HasLabel(labelFilter) {
 				continue
 			}
-			if showUnclaimed && sg.IsClaimed() {
+			if showUnclaimed && sg.IsClaimedWithDuration(claimDuration) {
 				continue
 			}
 			if statusFilter != "" && string(sg.Status) != statusFilter {
@@ -115,11 +118,11 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			if priorityFilter != "" && string(sg.Priority) != priorityFilter {
 				continue
 			}
-			if mineFilter && !isMine(sg, mineAgent) {
+			if mineFilter && !isMine(sg, mineAgent, claimDuration) {
 				continue
 			}
-			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent)
-		}
+		printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent, claimDuration)
+	}
 
 		return nil
 	},
@@ -127,7 +130,7 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 
 const maxDisplayDepth = 50
 
-func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, mineAgent string) {
+func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, mineAgent string, claimDuration time.Duration) {
 	if indent > maxDisplayDepth {
 		fmt.Printf("%-6s %s[Max depth reached]\n", sg.ID, strings.Repeat("  ", indent))
 		return
@@ -162,8 +165,8 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 	}
 
 	// Claim status (compact) with remaining time
-	if sg.IsClaimed() {
-		remaining := timeUntilExpiry(sg)
+	if sg.IsClaimedWithDuration(claimDuration) {
+		remaining := timeUntilExpiry(sg, claimDuration)
 		if remaining != "" {
 			metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+", "+remaining+"]")
 		} else {
@@ -202,10 +205,10 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		if priorityFilter != "" && string(child.Priority) != priorityFilter {
 			continue
 		}
-		if mineFilter && !isMine(child, mineAgent) {
+		if mineFilter && !isMine(child, mineAgent, claimDuration) {
 			continue
 		}
-		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent)
+		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent, claimDuration)
 	}
 }
 
@@ -221,8 +224,8 @@ func resolveAgentName() string {
 // isMine checks if a saga is claimed by the current process session
 // Comparison is by ppid (process session), not username — same ppid means
 // same shell/agent session. Username is just decoration.
-func isMine(sg *saga.Saga, _ string) bool {
-	if !sg.IsClaimed() {
+func isMine(sg *saga.Saga, _ string, claimDuration time.Duration) bool {
+	if !sg.IsClaimedWithDuration(claimDuration) {
 		return false
 	}
 	claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
@@ -231,11 +234,11 @@ func isMine(sg *saga.Saga, _ string) bool {
 }
 
 // timeUntilExpiry returns a human-readable remaining time string for a claimed saga
-func timeUntilExpiry(sg *saga.Saga) string {
+func timeUntilExpiry(sg *saga.Saga, claimDuration time.Duration) string {
 	if sg.ClaimedBy == "" {
 		return ""
 	}
-	expiry := sg.ClaimExpiry()
+	expiry := sg.ClaimExpiryWithDuration(claimDuration)
 	remaining := time.Until(expiry)
 	if remaining <= 0 {
 		return "expired"

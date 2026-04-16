@@ -3,6 +3,7 @@ package saga
 import (
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"time"
 )
 
@@ -207,9 +208,16 @@ func (s *Saga) IsClaimed() bool {
 	if s.ClaimedBy == "" {
 		return false
 	}
-	// Check if claim expired (24 hours default)
-	expiry := s.ClaimedAt.Add(24 * time.Hour)
-	return time.Now().Before(expiry)
+	// Default 24h; callers should use IsClaimedWithDuration when possible
+	return time.Now().Before(s.ClaimedAt.Add(24 * time.Hour))
+}
+
+// IsClaimedWithDuration returns true if saga is currently claimed using the given duration
+func (s *Saga) IsClaimedWithDuration(d time.Duration) bool {
+	if s.ClaimedBy == "" {
+		return false
+	}
+	return time.Now().Before(s.ClaimedAt.Add(d))
 }
 
 // Claim marks saga as claimed by agent
@@ -218,6 +226,14 @@ func (s *Saga) Claim(agent string) {
 	s.ClaimedAt = time.Now()
 	s.UpdatedAt = time.Now()
 	s.AddHistory("claimed", "Claimed by "+agent)
+}
+
+// ClaimWithDuration marks saga as claimed by agent with explicit duration
+func (s *Saga) ClaimWithDuration(agent string, d time.Duration) {
+	s.ClaimedBy = agent
+	s.ClaimedAt = time.Now()
+	s.UpdatedAt = time.Now()
+	s.AddHistory("claimed", fmt.Sprintf("Claimed by %s for %s", agent, d))
 }
 
 // Unclaim releases the claim
@@ -230,12 +246,20 @@ func (s *Saga) Unclaim() {
 	s.UpdatedAt = time.Now()
 }
 
-// ClaimExpiry returns when claim expires
+// ClaimExpiry returns when claim expires (default 24h)
 func (s *Saga) ClaimExpiry() time.Time {
 	if s.ClaimedAt.IsZero() {
 		return time.Time{}
 	}
 	return s.ClaimedAt.Add(24 * time.Hour)
+}
+
+// ClaimExpiryWithDuration returns when claim expires using the given duration
+func (s *Saga) ClaimExpiryWithDuration(d time.Duration) time.Time {
+	if s.ClaimedAt.IsZero() {
+		return time.Time{}
+	}
+	return s.ClaimedAt.Add(d)
 }
 
 // AddHistory adds a new entry to the saga's history
