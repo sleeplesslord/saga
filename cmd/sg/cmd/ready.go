@@ -100,10 +100,10 @@ Examples:
 
 			claimStr := ""
 			if sg.IsClaimed() {
-				// Show "me" for own claims
+				// Show "me" for same-session claims (ppid match)
 				claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
-				agentParts := strings.SplitN(agent, "@", 2)
-				if claimParts[0] == agentParts[0] {
+				currentPPID := fmt.Sprintf("%d", os.Getppid())
+				if len(claimParts) == 2 && claimParts[1] == currentPPID {
 					claimStr = " [mine]"
 				} else {
 					claimStr = fmt.Sprintf(" [claimed:%s]", sg.ClaimedBy)
@@ -117,18 +117,20 @@ Examples:
 	},
 }
 
-// isReady checks if a saga can be worked on by the given agent
+// isReady checks if a saga can be worked on by the current process session
 func isReady(sg *saga.Saga, st *store.Store, agent string) bool {
 	// Must be active
 	if sg.Status != saga.StatusActive {
 		return false
 	}
 
-	// Exclude claimed by others (but allow own claims)
+	// Exclude claimed by other sessions (ppid comparison)
+	// Same ppid = same shell/agent session = allowed
+	// Different ppid = different session = excluded
 	if sg.IsClaimed() {
 		claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
-		agentParts := strings.SplitN(agent, "@", 2)
-		if claimParts[0] != agentParts[0] {
+		currentPPID := fmt.Sprintf("%d", os.Getppid())
+		if len(claimParts) == 2 && claimParts[1] != currentPPID {
 			return false
 		}
 	}
