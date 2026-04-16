@@ -264,6 +264,10 @@ func (s *Store) LoadAll(scopes ...Scope) ([]*saga.Saga, error) {
 		allSagas = append(allSagas, sagas...)
 	}
 
+	// Dedupe by ID across scopes (same saga shouldn't exist in both,
+	// but guard against it as a safety net)
+	allSagas = dedupeByID(allSagas)
+
 	return allSagas, nil
 }
 
@@ -287,7 +291,22 @@ func (s *Store) loadAllUnlocked() ([]*saga.Saga, error) {
 		allSagas = append(allSagas, sagas...)
 	}
 
-	return allSagas, nil
+	return dedupeByID(allSagas), nil
+}
+
+// dedupeByID removes duplicate sagas by ID, keeping the first occurrence.
+// This guards against the same saga appearing in both global and local stores.
+func dedupeByID(sagas []*saga.Saga) []*saga.Saga {
+	seen := make(map[string]bool, len(sagas))
+	result := make([]*saga.Saga, 0, len(sagas))
+	for _, sg := range sagas {
+		if seen[sg.ID] {
+			continue
+		}
+		seen[sg.ID] = true
+		result = append(result, sg)
+	}
+	return result
 }
 
 // loadFromPath loads sagas from a specific file path

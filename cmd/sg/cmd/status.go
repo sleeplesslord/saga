@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -28,7 +29,8 @@ var statusCmd = &cobra.Command{
 		fmt.Printf("Saga: %s (%s)\n", sg.ID, sg.Status)
 		fmt.Printf("Title: %s\n", sg.Title)
 		if sg.Description != "" {
-			fmt.Printf("Description: %s\n", sg.Description)
+			desc := strings.ReplaceAll(sg.Description, "\\n", "\n")
+			fmt.Printf("Description: %s\n", desc)
 		}
 		if sg.IsSubSaga() {
 			fmt.Printf("Parent: %s\n", sg.ParentID)
