@@ -41,7 +41,15 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sagas, err := st.LoadAll()
+		// Default to local-only when project exists (consistent with sg list)
+		var scopes []store.Scope
+		if st.HasLocal() {
+			scopes = []store.Scope{store.ScopeLocal}
+		} else {
+			scopes = []store.Scope{store.ScopeGlobal}
+		}
+
+		sagas, err := st.LoadAll(scopes...)
 		if err != nil {
 			return fmt.Errorf("loading sagas: %w", err)
 		}
@@ -135,7 +143,7 @@ Examples:
 
 func init() {
 	searchCmd.Flags().StringArrayVar(&searchLabels, "label", nil, "Filter by label (can specify multiple)")
-	searchCmd.Flags().StringVar(&searchStatus, "status", "", "Filter by status (active, paused, done)")
+	searchCmd.Flags().StringVar(&searchStatus, "status", "", "Filter by status (active, paused, done, wontdo)")
 	searchCmd.Flags().StringVar(&searchPriority, "priority", "", "Filter by priority (high, normal, low)")
 	rootCmd.AddCommand(searchCmd)
 }

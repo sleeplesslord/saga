@@ -26,7 +26,15 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sagas, err := st.LoadAll()
+		// Default to local-only when project exists (consistent with sg list)
+		var scopes []store.Scope
+		if st.HasLocal() {
+			scopes = []store.Scope{store.ScopeLocal}
+		} else {
+			scopes = []store.Scope{store.ScopeGlobal}
+		}
+
+		sagas, err := st.LoadAll(scopes...)
 		if err != nil {
 			return fmt.Errorf("loading sagas: %w", err)
 		}

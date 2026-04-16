@@ -16,3 +16,4 @@ vendor/
 .idea/
 *.swp
 *.swo
+sg_test

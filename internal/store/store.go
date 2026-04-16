@@ -25,41 +25,41 @@ type Store struct {
 	globalPath string
 	localPath  string
 	mu         sync.RWMutex
-	
+
 	// In-memory indexes (rebuilt from JSONL)
-	indexByID       map[string]*saga.Saga
-	indexByParent   map[string][]*saga.Saga
-	indexByStatus   map[saga.Status][]*saga.Saga
-	indexByLabel    map[string][]*saga.Saga
-	indexLoaded     bool
+	indexByID     map[string]*saga.Saga
+	indexByParent map[string][]*saga.Saga
+	indexByStatus map[saga.Status][]*saga.Saga
+	indexByLabel  map[string][]*saga.Saga
+	indexLoaded   bool
 }
 
 // loadIndexes builds in-memory indexes from JSONL files
 func (s *Store) loadIndexes() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	if s.indexLoaded {
 		return nil
 	}
-	
+
 	// Initialize indexes
 	s.indexByID = make(map[string]*saga.Saga)
 	s.indexByParent = make(map[string][]*saga.Saga)
 	s.indexByStatus = make(map[saga.Status][]*saga.Saga)
 	s.indexByLabel = make(map[string][]*saga.Saga)
-	
+
 	// Load all sagas
 	sagas, err := s.loadAllUnlocked()
 	if err != nil {
 		return err
 	}
-	
+
 	// Build indexes
 	for _, sg := range sagas {
 		s.indexSaga(sg)
 	}
-	
+
 	s.indexLoaded = true
 	return nil
 }
@@ -67,15 +67,15 @@ func (s *Store) loadIndexes() error {
 // indexSaga adds a saga to all indexes
 func (s *Store) indexSaga(sg *saga.Saga) {
 	s.indexByID[sg.ID] = sg
-	
+
 	// Index by parent
 	if sg.IsSubSaga() {
 		s.indexByParent[sg.ParentID] = append(s.indexByParent[sg.ParentID], sg)
 	}
-	
+
 	// Index by status
 	s.indexByStatus[sg.Status] = append(s.indexByStatus[sg.Status], sg)
-	
+
 	// Index by labels
 	for _, label := range sg.Labels {
 		s.indexByLabel[label] = append(s.indexByLabel[label], sg)
@@ -89,7 +89,7 @@ func (s *Store) updateIndex(old, updated *saga.Saga) {
 		s.removeFromStatusIndex(old)
 		s.removeFromLabelIndex(old)
 	}
-	
+
 	// Add updated
 	s.indexByID[updated.ID] = updated
 	s.indexByStatus[updated.Status] = append(s.indexByStatus[updated.Status], updated)
@@ -131,7 +131,8 @@ func New(globalPath string) (*Store, error) {
 	s := &Store{globalPath: globalPath}
 
 	// Check for local .saga directory
-	if localPath := findLocalSagaDir(); localPath != "" {
+	// IMPORTANT: never match the global directory as local
+	if localPath := findLocalSagaDir(globalPath); localPath != "" {
 		s.localPath = localPath
 	}
 
@@ -140,7 +141,8 @@ func New(globalPath string) (*Store, error) {
 
 // findLocalSagaDir searches for .saga/ directory in current or parent directories
 // Also checks for git worktrees to find .saga in the main repo
-func findLocalSagaDir() string {
+// Never returns a path that matches the global store path
+func findLocalSagaDir(globalPath string) string {
 	dir, err := os.Getwd()
 	if err != nil {
 		return ""
@@ -150,11 +152,15 @@ func findLocalSagaDir() string {
 		sagaDir := filepath.Join(dir, ".saga")
 		// Check if .saga directory exists
 		if info, err := os.Stat(sagaDir); err == nil && info.IsDir() {
-			return filepath.Join(sagaDir, "sagas.jsonl")
+			candidatePath := filepath.Join(sagaDir, "sagas.jsonl")
+			// Never match global path as local
+			if filepath.Clean(candidatePath) != filepath.Clean(globalPath) {
+				return candidatePath
+			}
 		}
 
 		// Check for git worktree (.git file points to main repo)
-		if worktreeDir := findWorktreeSagaDir(dir); worktreeDir != "" {
+		if worktreeDir := findWorktreeSagaDir(dir, globalPath); worktreeDir != "" {
 			return worktreeDir
 		}
 
@@ -170,7 +176,8 @@ func findLocalSagaDir() string {
 }
 
 // findWorktreeSagaDir checks if dir is a git worktree and returns path to main repo's .saga
-func findWorktreeSagaDir(dir string) string {
+// Never returns a path that matches the global store path
+func findWorktreeSagaDir(dir string, globalPath string) string {
 	gitFile := filepath.Join(dir, ".git")
 	info, err := os.Stat(gitFile)
 	if err != nil || info.IsDir() {
@@ -193,7 +200,11 @@ func findWorktreeSagaDir(dir string) string {
 		mainRepoDir := filepath.Dir(filepath.Dir(gitDir))
 		sagaDir := filepath.Join(mainRepoDir, ".saga")
 		if info, err := os.Stat(sagaDir); err == nil && info.IsDir() {
-			return filepath.Join(sagaDir, "sagas.jsonl")
+			candidatePath := filepath.Join(sagaDir, "sagas.jsonl")
+			// Never match global path as local
+			if filepath.Clean(candidatePath) != filepath.Clean(globalPath) {
+				return candidatePath
+			}
 		}
 	}
 
@@ -259,14 +270,14 @@ func (s *Store) LoadAll(scopes ...Scope) ([]*saga.Saga, error) {
 // loadAllUnlocked loads all sagas without locking (caller must hold lock)
 func (s *Store) loadAllUnlocked() ([]*saga.Saga, error) {
 	var allSagas []*saga.Saga
-	
+
 	// Load global
 	sagas, err := s.loadFromPathUnlocked(s.globalPath)
 	if err != nil {
 		return nil, err
 	}
 	allSagas = append(allSagas, sagas...)
-	
+
 	// Load local if exists
 	if s.localPath != "" {
 		sagas, err = s.loadFromPathUnlocked(s.localPath)
@@ -275,7 +286,7 @@ func (s *Store) loadAllUnlocked() ([]*saga.Saga, error) {
 		}
 		allSagas = append(allSagas, sagas...)
 	}
-	
+
 	return allSagas, nil
 }
 
@@ -480,14 +491,14 @@ func (s *Store) GetByID(id string) (*saga.Saga, error) {
 	if err := s.loadIndexes(); err != nil {
 		return nil, err
 	}
-	
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if sg, ok := s.indexByID[id]; ok {
 		return sg, nil
 	}
-	
+
 	return nil, fmt.Errorf("saga not found: %s", id)
 }
 
@@ -497,10 +508,10 @@ func (s *Store) GetChildren(parentID string) ([]*saga.Saga, error) {
 	if err := s.loadIndexes(); err != nil {
 		return nil, err
 	}
-	
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	return s.indexByParent[parentID], nil
 }
 
@@ -594,4 +605,19 @@ func (s *Store) WouldCreateCircularDependency(sagaID string, targetID string) (b
 	}
 
 	return check(targetID)
+}
+
+// GetActiveSagasWithParent returns all sagas matching a parent that are active
+func (s *Store) GetActiveSagasWithParent(parentID string) ([]*saga.Saga, error) {
+	children, err := s.GetChildren(parentID)
+	if err != nil {
+		return nil, err
+	}
+	var active []*saga.Saga
+	for _, child := range children {
+		if child.Status == saga.StatusActive {
+			active = append(active, child)
+		}
+	}
+	return active, nil
 }

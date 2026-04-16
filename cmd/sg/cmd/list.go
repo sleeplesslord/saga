@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -17,14 +19,16 @@ var (
 	scopeGlobal   bool
 	labelFilter   string
 	showUnclaimed bool
+	statusFilter  string
+	priorityFilter string
+	mineFilter    bool
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List sagas",
-	Long: `List sagas. By default shows active sagas from both global and local (if in project) scopes.
-
-Use flags to filter by scope or show all statuses.`,
+	Long: `List sagas. When a local .saga/ exists, shows local sagas by default.
+Use --global to include global sagas. Use flags to filter by scope, status, label, or priority.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		st, err := store.New(store.DefaultPath())
 		if err != nil {
@@ -32,6 +36,7 @@ Use flags to filter by scope or show all statuses.`,
 		}
 
 		// Determine scopes
+		// When local exists, default to local-only (user can add --global)
 		var scopes []store.Scope
 		if scopeLocal && scopeGlobal {
 			scopes = []store.Scope{store.ScopeLocal, store.ScopeGlobal}
@@ -40,9 +45,11 @@ Use flags to filter by scope or show all statuses.`,
 		} else if scopeGlobal {
 			scopes = []store.Scope{store.ScopeGlobal}
 		} else {
-			scopes = []store.Scope{store.ScopeGlobal}
+			// Default: local-only if local exists, otherwise global
 			if st.HasLocal() {
-				scopes = append(scopes, store.ScopeLocal)
+				scopes = []store.Scope{store.ScopeLocal}
+			} else {
+				scopes = []store.Scope{store.ScopeGlobal}
 			}
 		}
 
@@ -71,12 +78,26 @@ Use flags to filter by scope or show all statuses.`,
 		})
 
 		// Show scope info
-		if st.HasLocal() && !scopeLocal && !scopeGlobal {
-			fmt.Printf("(Showing global + project sagas from %s)\n\n", filepath.Dir(st.LocalPath()))
+		scopeDesc := "global"
+		if len(scopes) == 2 {
+			scopeDesc = "global + project"
+		} else if scopes[0] == store.ScopeLocal {
+			scopeDesc = "project"
 		}
+		fmt.Printf("(Showing %s sagas", scopeDesc)
+		if st.HasLocal() {
+			fmt.Printf(" from %s", filepath.Dir(st.LocalPath()))
+		}
+		fmt.Printf(")\n\n")
 
 		fmt.Printf("%-6s %s\n", "ID", "Title Status Updated [labels] [claimed]")
 		fmt.Println(strings.Repeat("-", 155))
+
+		// Resolve agent name for --mine filter
+		var mineAgent string
+		if mineFilter {
+			mineAgent = resolveAgentName()
+		}
 
 		// Build parent lookup
 		children := make(map[string][]*saga.Saga)
@@ -100,7 +121,16 @@ Use flags to filter by scope or show all statuses.`,
 			if showUnclaimed && sg.IsClaimed() {
 				continue
 			}
-			printSagaWithIndent(sg, 0, showAll, children, labelFilter)
+			if statusFilter != "" && string(sg.Status) != statusFilter {
+				continue
+			}
+			if priorityFilter != "" && string(sg.Priority) != priorityFilter {
+				continue
+			}
+			if mineFilter && !isMine(sg, mineAgent) {
+				continue
+			}
+			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent)
 		}
 
 		return nil
@@ -109,7 +139,7 @@ Use flags to filter by scope or show all statuses.`,
 
 const maxDisplayDepth = 50
 
-func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string) {
+func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, mineAgent string) {
 	if indent > maxDisplayDepth {
 		fmt.Printf("%-6s %s[Max depth reached]\n", sg.ID, strings.Repeat("  ", indent))
 		return
@@ -122,13 +152,13 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 
 	// Build metadata strings
 	metaParts := []string{}
-	
+
 	// Status
 	metaParts = append(metaParts, string(sg.Status))
-	
+
 	// Updated time
 	metaParts = append(metaParts, sg.UpdatedAt.Format("Jan 02 15:04"))
-	
+
 	// Deadline
 	if sg.Deadline != "" {
 		metaParts = append(metaParts, "[due:"+sg.Deadline+"]")
@@ -143,13 +173,18 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		metaParts = append(metaParts, "["+labelStr+"]")
 	}
 
-	// Claim status (compact)
+	// Claim status (compact) with remaining time
 	if sg.IsClaimed() {
-		metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+"]")
+		remaining := timeUntilExpiry(sg)
+		if remaining != "" {
+			metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+", "+remaining+"]")
+		} else {
+			metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+"]")
+		}
 	}
-	
+
 	metaStr := strings.Join(metaParts, " ")
-	
+
 	// Calculate available space for title
 	// Format: ID + indent + title + metadata
 	// Terminal width: 160 chars (modern terminals)
@@ -158,12 +193,12 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 	if availableWidth < 30 {
 		availableWidth = 30 // Minimum title space
 	}
-	
+
 	title := sg.Title
 	if len(title) > availableWidth {
 		title = title[:availableWidth-3] + "..."
 	}
-	
+
 	fmt.Printf("%-6s %s%s %s\n", sg.ID, indentStr, title, metaStr)
 
 	for _, child := range children[sg.ID] {
@@ -173,15 +208,65 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		if labelFilter != "" && !child.HasLabel(labelFilter) {
 			continue
 		}
-		printSagaWithIndent(child, indent+1, showAll, children, labelFilter)
+		if statusFilter != "" && string(child.Status) != statusFilter {
+			continue
+		}
+		if priorityFilter != "" && string(child.Priority) != priorityFilter {
+			continue
+		}
+		if mineFilter && !isMine(child, mineAgent) {
+			continue
+		}
+		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent)
 	}
 }
 
+// resolveAgentName returns the current agent identity for --mine filtering
+func resolveAgentName() string {
+	agent := os.Getenv("USER")
+	if agent == "" {
+		agent = "unknown"
+	}
+	return agent
+}
+
+// isMine checks if a saga is claimed by the current agent
+func isMine(sg *saga.Saga, agent string) bool {
+	if !sg.IsClaimed() {
+		return false
+	}
+	// Match on agent name prefix (before @ppid)
+	parts := strings.SplitN(sg.ClaimedBy, "@", 2)
+	agentParts := strings.SplitN(agent, "@", 2)
+	return parts[0] == agentParts[0]
+}
+
+// timeUntilExpiry returns a human-readable remaining time string for a claimed saga
+func timeUntilExpiry(sg *saga.Saga) string {
+	if sg.ClaimedBy == "" {
+		return ""
+	}
+	expiry := sg.ClaimExpiry()
+	remaining := time.Until(expiry)
+	if remaining <= 0 {
+		return "expired"
+	}
+	hours := int(remaining.Hours())
+	minutes := int(remaining.Minutes()) % 60
+	if hours > 0 {
+		return fmt.Sprintf("%dh%dm left", hours, minutes)
+	}
+	return fmt.Sprintf("%dm left", minutes)
+}
+
 func init() {
-	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all sagas including done")
+	listCmd.Flags().BoolVarP(&showAll, "all", "a", false, "Show all sagas including done/wontdo")
 	listCmd.Flags().BoolVarP(&scopeLocal, "local", "l", false, "Show only project sagas")
-	listCmd.Flags().BoolVarP(&scopeGlobal, "global", "g", false, "Show only global sagas")
+	listCmd.Flags().BoolVarP(&scopeGlobal, "global", "g", false, "Include global sagas (when project exists, list shows local by default)")
 	listCmd.Flags().StringVar(&labelFilter, "label", "", "Filter by label")
 	listCmd.Flags().BoolVar(&showUnclaimed, "unclaimed", false, "Show only unclaimed sagas")
+	listCmd.Flags().StringVar(&statusFilter, "status", "", "Filter by status (active, paused, done, wontdo)")
+	listCmd.Flags().StringVar(&priorityFilter, "priority", "", "Filter by priority (high, normal, low)")
+	listCmd.Flags().BoolVar(&mineFilter, "mine", false, "Show only sagas claimed by me")
 	rootCmd.AddCommand(listCmd)
 }
