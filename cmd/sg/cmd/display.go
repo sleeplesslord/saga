@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 )
@@ -83,4 +84,101 @@ func repeat(s string, n int) string {
 		result.WriteString(s)
 	}
 	return result.String()
+}
+
+// --- Table formatting helpers ---
+
+// runeWidth returns the terminal display width of a single rune.
+// CJK and other East Asian wide characters count as 2 columns.
+func runeWidth(r rune) int {
+	switch {
+	case r >= 0x1100 && r <= 0x115F,
+		r >= 0x2E80 && r <= 0x9FFF,
+		r >= 0xA960 && r <= 0xA97C,
+		r >= 0xAC00 && r <= 0xD7A3,
+		r >= 0xD7B0 && r <= 0xD7C6,
+		r >= 0xF900 && r <= 0xFAFF,
+		r >= 0xFE30 && r <= 0xFE6F,
+		r >= 0xFF01 && r <= 0xFF60,
+		r >= 0xFFE0 && r <= 0xFFE6,
+		r >= 0x20000 && r <= 0x2FFFD,
+		r >= 0x30000 && r <= 0x3FFFD:
+		return 2
+	default:
+		return 1
+	}
+}
+
+// displayWidth returns the terminal display width of a string.
+// CJK characters count as 2 columns; most others count as 1.
+func displayWidth(s string) int {
+	w := 0
+	for _, r := range s {
+		w += runeWidth(r)
+	}
+	return w
+}
+
+// truncateToWidth truncates s to fit within the given display width.
+// If truncated, appends "…" (ellipsis) to indicate truncation.
+func truncateToWidth(s string, width int) string {
+	if displayWidth(s) <= width {
+		return s
+	}
+	target := width - 1 // leave room for …
+	runes := []rune(s)
+	w := 0
+	for i, r := range runes {
+		rw := runeWidth(r)
+		if w+rw > target {
+			return string(runes[:i]) + "…"
+		}
+		w += rw
+	}
+	return s
+}
+
+// padOrTruncate right-pads s to exactly the given display width, or truncates with "…" if too wide.
+func padOrTruncate(s string, width int) string {
+	s = truncateToWidth(s, width)
+	dw := displayWidth(s)
+	return s + strings.Repeat(" ", width-dw)
+}
+
+// formatDeadline converts a YYYYMMDD deadline to "MM-DD" format for table display.
+// Returns the original string if parsing fails, or empty if no deadline.
+func formatDeadline(deadline string) string {
+	if deadline == "" {
+		return ""
+	}
+	t, err := time.Parse("20060102", deadline)
+	if err != nil {
+		return deadline
+	}
+	return t.Format("01-02")
+}
+
+// printTableHeader prints a table header with │ separators and ─ divider line.
+func printTableHeader(headers []string, widths []int) {
+	parts := make([]string, len(headers))
+	for i, h := range headers {
+		parts[i] = padOrTruncate(h, widths[i])
+	}
+	fmt.Println(strings.Join(parts, " │ "))
+
+	seps := make([]string, len(headers))
+	for i := range seps {
+		seps[i] = strings.Repeat("─", widths[i])
+	}
+	fmt.Println(strings.Join(seps, "─┼─"))
+}
+
+// printTableRow prints a formatted table row with │ separators.
+// indent is prepended before the row for hierarchical indentation.
+func printTableRow(cells []string, widths []int, indent string) {
+	parts := make([]string, len(cells))
+	for i, c := range cells {
+		parts[i] = padOrTruncate(c, widths[i])
+	}
+	fmt.Printf("%s%s\n", indent, strings.Join(parts, " │ "))
 }

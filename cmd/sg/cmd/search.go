@@ -15,6 +15,9 @@ var (
 	searchPriority string
 )
 
+// Column widths for search table (no CLAIM column, compact format)
+var searchWidths = []int{10, 42, 7, 5, 5, 5, 13}
+
 var searchCmd = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search sagas",
@@ -100,41 +103,35 @@ Examples:
 
 		fmt.Printf("Found %d saga(s):\n\n", len(matches))
 
-		// Use consistent formatting with sg list
-		// Terminal width: 160 chars (modern terminals)
-		terminalWidth := 160
+		// Print table header
+		printTableHeader(
+			[]string{"ID", "TITLE", "STATUS", "PRI", "DATE", "DUE", "LABELS"},
+			searchWidths,
+		)
 
 		for _, sg := range matches {
-			// Build metadata strings
-			metaParts := []string{}
-
-			// Status
-			metaParts = append(metaParts, string(sg.Status))
-
-			// Labels
+			// Build labels display
+			labelsStr := ""
 			if len(sg.Labels) > 0 {
-				labelStr := strings.Join(sg.Labels, ", ")
-				if len(labelStr) > 20 {
-					labelStr = labelStr[:17] + "..."
-				}
-				metaParts = append(metaParts, "["+labelStr+"]")
+				labelsStr = strings.Join(sg.Labels, ",")
 			}
 
-			metaStr := strings.Join(metaParts, " ")
-
-			// Calculate available space for title
-			// Format: ID + title + metadata + spacing
-			availableWidth := terminalWidth - 6 - len(metaStr) - 3 // 3 for spacing
-			if availableWidth < 30 {
-				availableWidth = 30 // Minimum title space
+			// Build priority display (show only if not normal)
+			priorityStr := ""
+			if sg.Priority != saga.PriorityNormal {
+				priorityStr = string(sg.Priority)
 			}
 
-			title := sg.Title
-			if len(title) > availableWidth {
-				title = title[:availableWidth-3] + "..."
+			cells := []string{
+				sg.ID,
+				sg.Title,
+				string(sg.Status),
+				priorityStr,
+				sg.UpdatedAt.Format("01-02"),
+				formatDeadline(sg.Deadline),
+				labelsStr,
 			}
-
-			fmt.Printf("%-6s %s %s\n", sg.ID, title, metaStr)
+			printTableRow(cells, searchWidths, "")
 		}
 
 		return nil

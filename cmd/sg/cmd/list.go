@@ -23,6 +23,9 @@ var (
 	mineFilter    bool
 )
 
+// Column widths for list table
+var listWidths = []int{10, 34, 7, 5, 5, 5, 13, 18}
+
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List sagas",
@@ -81,8 +84,11 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 		}
 		fmt.Printf(")\n\n")
 
-		fmt.Printf("%-6s %s\n", "ID", "Title Status Updated [labels] [claimed]")
-		fmt.Println(strings.Repeat("-", 155))
+		// Print table header
+		printTableHeader(
+			[]string{"ID", "TITLE", "STATUS", "PRI", "DATE", "DUE", "LABELS", "CLAIM"},
+			listWidths,
+		)
 
 		// Resolve agent name for --mine filter
 		var mineAgent string
@@ -121,8 +127,8 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			if mineFilter && !isMine(sg, mineAgent, claimDuration) {
 				continue
 			}
-		printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent, claimDuration)
-	}
+			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent, claimDuration)
+		}
 
 		return nil
 	},
@@ -132,65 +138,51 @@ const maxDisplayDepth = 50
 
 func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, mineAgent string, claimDuration time.Duration) {
 	if indent > maxDisplayDepth {
-		fmt.Printf("%-6s %s[Max depth reached]\n", sg.ID, strings.Repeat("  ", indent))
+		titleStr := strings.Repeat("  ", indent) + "↳ " + "[Max depth reached]"
+		printTableRow([]string{sg.ID, titleStr, "", "", "", "", "", ""}, listWidths, "")
 		return
 	}
 
-	indentStr := ""
+	// Build title with indent prefix (keeps ID as first field for script parsing)
+	titleStr := sg.Title
 	if indent > 0 {
-		indentStr = strings.Repeat("  ", indent) + "↳ "
+		titleStr = strings.Repeat("  ", indent) + "↳ " + titleStr
 	}
 
-	// Build metadata strings
-	metaParts := []string{}
-
-	// Status
-	metaParts = append(metaParts, string(sg.Status))
-
-	// Updated time
-	metaParts = append(metaParts, sg.UpdatedAt.Format("Jan 02 15:04"))
-
-	// Deadline
-	if sg.Deadline != "" {
-		metaParts = append(metaParts, "[due:"+sg.Deadline+"]")
-	}
-
-	// Labels (compact)
-	if len(sg.Labels) > 0 {
-		labelStr := strings.Join(sg.Labels, ",")
-		if len(labelStr) > 15 {
-			labelStr = labelStr[:12] + "..."
-		}
-		metaParts = append(metaParts, "["+labelStr+"]")
-	}
-
-	// Claim status (compact) with remaining time
+	// Build claim display (always show full identity in list overview)
+	claimStr := ""
 	if sg.IsClaimedWithDuration(claimDuration) {
+		claimStr = sg.ClaimedBy
 		remaining := timeUntilExpiry(sg, claimDuration)
 		if remaining != "" {
-			metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+", "+remaining+"]")
-		} else {
-			metaParts = append(metaParts, "[claimed:"+sg.ClaimedBy+"]")
+			claimStr += " " + remaining
 		}
 	}
 
-	metaStr := strings.Join(metaParts, " ")
-
-	// Calculate available space for title
-	// Format: ID + indent + title + metadata
-	// Terminal width: 160 chars (modern terminals)
-	terminalWidth := 160
-	availableWidth := terminalWidth - 6 - len(indentStr) - len(metaStr) - 3 // 3 for spacing
-	if availableWidth < 30 {
-		availableWidth = 30 // Minimum title space
+	// Build labels display
+	labelsStr := ""
+	if len(sg.Labels) > 0 {
+		labelsStr = strings.Join(sg.Labels, ",")
 	}
 
-	title := sg.Title
-	if len(title) > availableWidth {
-		title = title[:availableWidth-3] + "..."
+	// Build priority display (show only if not normal)
+	priorityStr := ""
+	if sg.Priority != saga.PriorityNormal {
+		priorityStr = string(sg.Priority)
 	}
 
-	fmt.Printf("%-6s %s%s %s\n", sg.ID, indentStr, title, metaStr)
+	cells := []string{
+		sg.ID,
+		titleStr,
+		string(sg.Status),
+		priorityStr,
+		sg.UpdatedAt.Format("01-02"),
+		formatDeadline(sg.Deadline),
+		labelsStr,
+		claimStr,
+	}
+
+	printTableRow(cells, listWidths, "")
 
 	for _, child := range children[sg.ID] {
 		if !showAll && child.Status != saga.StatusActive {
@@ -246,9 +238,9 @@ func timeUntilExpiry(sg *saga.Saga, claimDuration time.Duration) string {
 	hours := int(remaining.Hours())
 	minutes := int(remaining.Minutes()) % 60
 	if hours > 0 {
-		return fmt.Sprintf("%dh%dm left", hours, minutes)
+		return fmt.Sprintf("%dh%dm", hours, minutes)
 	}
-	return fmt.Sprintf("%dm left", minutes)
+	return fmt.Sprintf("%dm", minutes)
 }
 
 func init() {

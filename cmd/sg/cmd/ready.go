@@ -14,6 +14,9 @@ import (
 
 var readyTake bool
 
+// Column widths for ready table (no STATUS column since all are active)
+var readyWidths = []int{10, 44, 5, 5, 13, 18}
+
 var readyCmd = &cobra.Command{
 	Use:   "ready",
 	Short: "List sagas ready to work on",
@@ -86,35 +89,50 @@ Examples:
 
 		fmt.Printf("Found %d saga(s) ready to work on:\n\n", len(ready))
 
+		// Print table header
+		printTableHeader(
+			[]string{"ID", "TITLE", "PRI", "DUE", "LABELS", "CLAIM"},
+			readyWidths,
+		)
+
 		for _, sg := range ready {
+			// Build priority display (show only if not normal)
 			priorityStr := ""
 			if sg.Priority != saga.PriorityNormal {
-				priorityStr = fmt.Sprintf(" [%s]", sg.Priority)
+				priorityStr = string(sg.Priority)
 			}
 
-			labelStr := ""
+			// Build labels display
+			labelsStr := ""
 			if len(sg.Labels) > 0 {
-				labelStr = fmt.Sprintf(" [%s]", strings.Join(sg.Labels, ","))
+				labelsStr = strings.Join(sg.Labels, ",")
 			}
 
-			deadlineStr := ""
-			if sg.Deadline != "" {
-				deadlineStr = fmt.Sprintf(" [due:%s]", sg.Deadline)
-			}
-
+			// Build claim display
 			claimStr := ""
 			if sg.IsClaimedWithDuration(claimDuration) {
-				// Show "me" for same-session claims (ppid match)
 				claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
 				currentPPID := fmt.Sprintf("%d", os.Getppid())
 				if len(claimParts) == 2 && claimParts[1] == currentPPID {
-					claimStr = " [mine]"
+					claimStr = "mine"
 				} else {
-					claimStr = fmt.Sprintf(" [claimed:%s]", sg.ClaimedBy)
+					claimStr = sg.ClaimedBy
+				}
+				remaining := timeUntilExpiry(sg, claimDuration)
+				if remaining != "" {
+					claimStr += " " + remaining
 				}
 			}
 
-			fmt.Printf("  %-6s %s%s%s%s%s\n", sg.ID, sg.Title, priorityStr, labelStr, deadlineStr, claimStr)
+			cells := []string{
+				sg.ID,
+				sg.Title,
+				priorityStr,
+				formatDeadline(sg.Deadline),
+				labelsStr,
+				claimStr,
+			}
+			printTableRow(cells, readyWidths, "")
 		}
 
 		return nil
