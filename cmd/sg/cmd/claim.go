@@ -108,18 +108,20 @@ Example:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		for _, id := range ids {
-			sg, err := st.GetByID(id)
-			if err != nil {
-				return sagaNotFound(id)
-			}
+	claimDuration := st.ClaimDuration()
 
-			if !sg.IsClaimed() {
-				return fmt.Errorf("saga %s is not claimed", id)
-			}
+	for _, id := range ids {
+		sg, err := st.GetByID(id)
+		if err != nil {
+			return sagaNotFound(id)
+		}
 
-			agent := sg.ClaimedBy
-			sg.Unclaim()
+		if !sg.IsClaimedWithDuration(claimDuration) {
+			return fmt.Errorf("saga %s is not claimed", id)
+		}
+
+		agent := sg.ClaimedBy
+		sg.Unclaim()
 			if err := st.Update(sg); err != nil {
 				return fmt.Errorf("updating saga: %w", err)
 			}

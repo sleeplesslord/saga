@@ -31,7 +31,7 @@ Examples:
 
 		sg, err := st.GetByID(sagaID)
 		if err != nil {
-			return err
+			return sagaNotFound(sagaID)
 		}
 
 		target, err := st.GetByID(targetID)

@@ -45,8 +45,9 @@ var statusCmd = &cobra.Command{
 		if len(sg.RelatedTo) > 0 {
 			fmt.Printf("Related to: %v\n", sg.RelatedTo)
 		}
-		if sg.IsClaimed() {
-			fmt.Printf("Claimed by: %s (expires %s)\n", sg.ClaimedBy, sg.ClaimExpiry().Format("Jan 02 15:04"))
+		claimDuration := st.ClaimDuration()
+		if sg.IsClaimedWithDuration(claimDuration) {
+			fmt.Printf("Claimed by: %s (expires %s)\n", sg.ClaimedBy, sg.ClaimExpiryWithDuration(claimDuration).Format("Jan 02 15:04"))
 		}
 		if sg.Deadline != "" {
 			printField("Deadline:", sg.Deadline, 0)

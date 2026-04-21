@@ -74,10 +74,12 @@ Examples:
 			switch priority {
 			case "high":
 				sg.SetPriority(saga.PriorityHigh)
+			case "normal":
+				sg.SetPriority(saga.PriorityNormal)
 			case "low":
 				sg.SetPriority(saga.PriorityLow)
 			default:
-				// normal is default, nothing to do
+				return fmt.Errorf("invalid priority %q (must be high, normal, or low)", priority)
 			}
 			fmt.Printf("Priority: %s\n", sg.Priority)
 		}

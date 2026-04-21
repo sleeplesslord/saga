@@ -213,16 +213,23 @@ func resolveAgentName() string {
 	return agent
 }
 
-// isMine checks if a saga is claimed by the current process session
-// Comparison is by ppid (process session), not username — same ppid means
-// same shell/agent session. Username is just decoration.
-func isMine(sg *saga.Saga, _ string, claimDuration time.Duration) bool {
+// isMine checks if a saga is claimed by the current process session or agent name.
+// A claim matches "mine" if either: (a) the PPID portion of ClaimedBy matches
+// current PPID, OR (b) the agent name portion of ClaimedBy matches mineAgent.
+// The ClaimedBy format is "agentname@ppid".
+func isMine(sg *saga.Saga, mineAgent string, claimDuration time.Duration) bool {
 	if !sg.IsClaimedWithDuration(claimDuration) {
 		return false
 	}
 	claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
 	currentPPID := fmt.Sprintf("%d", os.Getppid())
-	return len(claimParts) == 2 && claimParts[1] == currentPPID
+	if len(claimParts) == 2 && claimParts[1] == currentPPID {
+		return true
+	}
+	if mineAgent != "" && len(claimParts) >= 1 && claimParts[0] == mineAgent {
+		return true
+	}
+	return false
 }
 
 // timeUntilExpiry returns a human-readable remaining time string for a claimed saga

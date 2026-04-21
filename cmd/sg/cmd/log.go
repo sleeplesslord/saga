@@ -48,7 +48,7 @@ Examples:
 
 		sg, err := st.GetByID(id)
 		if err != nil {
-			return err
+			return sagaNotFound(id)
 		}
 
 		sg.AddHistory("log", message)

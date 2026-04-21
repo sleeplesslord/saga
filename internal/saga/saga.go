@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"os"
+	"reflect"
 	"time"
 )
 
@@ -57,7 +59,7 @@ type HistoryEntry struct {
 func NewSaga(title string) *Saga {
 	now := time.Now()
 	return &Saga{
-		ID:        generateID(),
+		ID:        GenerateID(),
 		Title:     title,
 		Status:    StatusActive,
 		Priority:  PriorityNormal,
@@ -282,14 +284,15 @@ func (s *Saga) SetStatus(status Status) {
 	s.AddHistory("status_changed", string(oldStatus)+" -> "+string(status))
 }
 
-// generateID creates a short unique identifier using cryptographic randomness.
+// GenerateID creates a short unique identifier using cryptographic randomness.
 // Produces 6-character base36 IDs (36^6 ≈ 2.2 billion combinations).
-func generateID() string {
+func GenerateID() string {
 	const alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
 	var buf [8]byte
 	if _, err := rand.Read(buf[:]); err != nil {
-		// Fallback: mix timestamp with whatever entropy is available
-		binary.LittleEndian.PutUint64(buf[:], uint64(time.Now().UnixNano()))
+		// Fallback: mix timestamp with PID and stack pointer for additional entropy
+		n := uint64(time.Now().UnixNano()) ^ uint64(os.Getpid()) ^ uint64(reflect.ValueOf(&buf).Pointer())
+		binary.LittleEndian.PutUint64(buf[:], n)
 	}
 	n := binary.LittleEndian.Uint64(buf[:])
 	result := make([]byte, 6)

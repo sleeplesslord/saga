@@ -325,6 +325,7 @@ func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
 	for scanner.Scan() {
 		var sg saga.Saga
 		if err := json.Unmarshal(scanner.Bytes(), &sg); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: skipping malformed line in %s: %v\n", path, err)
 			continue // Skip malformed lines
 		}
 		sagas = append(sagas, &sg)
@@ -339,11 +340,23 @@ func (s *Store) Save(sg *saga.Saga, scope ...Scope) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Check for duplicate ID across all scopes
+	// Check for duplicate ID across all scopes, retry with new ID if collision
 	existing, _ := s.loadAllUnlocked()
-	for _, e := range existing {
-		if e.ID == sg.ID {
-			return fmt.Errorf("duplicate saga ID: %s", sg.ID)
+	for attempt := 0; attempt < 3; attempt++ {
+		collision := false
+		for _, e := range existing {
+			if e.ID == sg.ID {
+				collision = true
+				break
+			}
+		}
+		if !collision {
+			break
+		}
+		if attempt < 2 {
+			sg.ID = saga.GenerateID()
+		} else {
+			return fmt.Errorf("duplicate saga ID after 3 attempts: %s", sg.ID)
 		}
 	}
 
@@ -472,6 +485,7 @@ func (s *Store) loadFromPathUnlocked(path string) ([]*saga.Saga, error) {
 	for scanner.Scan() {
 		var sg saga.Saga
 		if err := json.Unmarshal(scanner.Bytes(), &sg); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: skipping malformed line in %s: %v\n", path, err)
 			continue
 		}
 		sagas = append(sagas, &sg)

@@ -25,8 +25,8 @@ var continueCmd = &cobra.Command{
 			return err
 		}
 
-		if sg.Status == saga.StatusDone {
-			return fmt.Errorf("saga %s is already done", sg.ID)
+		if sg.Status == saga.StatusDone || sg.Status == saga.StatusWontDo {
+			return fmt.Errorf("saga %s is in a terminal state (%s); use \"sg reopen\" to resume it", sg.ID, sg.Status)
 		}
 
 		sg.SetStatus(saga.StatusActive)

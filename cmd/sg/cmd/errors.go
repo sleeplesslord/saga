@@ -84,15 +84,4 @@ Examples:
   sg priority abc123 high`, p)
 }
 
-func invalidStatus(s string) error {
-	return fmt.Errorf(`invalid status "%s"
 
-Valid statuses: active, paused, done, wontdo`, s)
-}
-
-func storeError(err error) error {
-	return fmt.Errorf(`store error: %w
-
-Try:
-  sg init`, err)
-}
