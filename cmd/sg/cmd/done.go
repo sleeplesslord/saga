@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 
 	"github.com/sleeplesslord/saga/internal/saga"
@@ -113,26 +112,10 @@ Examples:
 	},
 }
 
-// isRunesInstalled checks if runes CLI is available
+// isRunesInstalled checks if runes CLI is available on PATH
 func isRunesInstalled() bool {
-	// Check PATH first
 	_, err := exec.LookPath("runes")
-	if err == nil {
-		return true
-	}
-	// Check common locations
-	commonPaths := []string{
-		"/usr/local/bin/runes",
-		"/usr/bin/runes",
-		"/home/hbn/.openclaw/workspace/runes/runes",
-		os.ExpandEnv("$HOME/go/bin/runes"),
-	}
-	for _, path := range commonPaths {
-		if _, err := os.Stat(path); err == nil {
-			return true
-		}
-	}
-	return false
+	return err == nil
 }
 
 func init() {

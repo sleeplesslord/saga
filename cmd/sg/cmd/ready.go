@@ -49,7 +49,10 @@ Examples:
 			return fmt.Errorf("loading sagas: %w", err)
 		}
 
-		agent := resolveAgentName()
+		agent := os.Getenv("USER")
+		if agent == "" {
+			agent = "unknown"
+		}
 
 		// Load claim duration from config
 		claimDuration := st.ClaimDuration()

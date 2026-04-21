@@ -90,12 +90,6 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			listWidths,
 		)
 
-		// Resolve agent name for --mine filter
-		var mineAgent string
-		if mineFilter {
-			mineAgent = resolveAgentName()
-		}
-
 		// Build parent lookup
 		children := make(map[string][]*saga.Saga)
 		for _, sg := range sagas {
@@ -124,10 +118,10 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			if priorityFilter != "" && string(sg.Priority) != priorityFilter {
 				continue
 			}
-			if mineFilter && !isMine(sg, mineAgent, claimDuration) {
+			if mineFilter && !isMine(sg, claimDuration) {
 				continue
 			}
-			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent, claimDuration)
+			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, claimDuration)
 		}
 
 		return nil
@@ -136,7 +130,7 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 
 const maxDisplayDepth = 50
 
-func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, mineAgent string, claimDuration time.Duration) {
+func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, claimDuration time.Duration) {
 	if indent > maxDisplayDepth {
 		titleStr := strings.Repeat("  ", indent) + "↳ " + "[Max depth reached]"
 		printTableRow([]string{sg.ID, titleStr, "", "", "", "", "", ""}, listWidths, "")
@@ -197,39 +191,24 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		if priorityFilter != "" && string(child.Priority) != priorityFilter {
 			continue
 		}
-		if mineFilter && !isMine(child, mineAgent, claimDuration) {
+		if mineFilter && !isMine(child, claimDuration) {
 			continue
 		}
-		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, mineAgent, claimDuration)
+		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, claimDuration)
 	}
 }
 
-// resolveAgentName returns the current agent identity for --mine filtering
-func resolveAgentName() string {
-	agent := os.Getenv("USER")
-	if agent == "" {
-		agent = "unknown"
-	}
-	return agent
-}
-
-// isMine checks if a saga is claimed by the current process session or agent name.
-// A claim matches "mine" if either: (a) the PPID portion of ClaimedBy matches
-// current PPID, OR (b) the agent name portion of ClaimedBy matches mineAgent.
-// The ClaimedBy format is "agentname@ppid".
-func isMine(sg *saga.Saga, mineAgent string, claimDuration time.Duration) bool {
+// isMine checks if a saga is claimed by the current process session.
+// Matches by PPID portion of ClaimedBy (format: "agentname@ppid").
+// Username matching is intentionally excluded — on single-user machines
+// $USER is always the same, making it a no-op filter.
+func isMine(sg *saga.Saga, claimDuration time.Duration) bool {
 	if !sg.IsClaimedWithDuration(claimDuration) {
 		return false
 	}
 	claimParts := strings.SplitN(sg.ClaimedBy, "@", 2)
 	currentPPID := fmt.Sprintf("%d", os.Getppid())
-	if len(claimParts) == 2 && claimParts[1] == currentPPID {
-		return true
-	}
-	if mineAgent != "" && len(claimParts) >= 1 && claimParts[0] == mineAgent {
-		return true
-	}
-	return false
+	return len(claimParts) == 2 && claimParts[1] == currentPPID
 }
 
 // timeUntilExpiry returns a human-readable remaining time string for a claimed saga
