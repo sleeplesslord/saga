@@ -480,25 +480,46 @@ func (s *Store) loadFromPathUnlocked(path string) ([]*saga.Saga, error) {
 	return sagas, scanner.Err()
 }
 
-// saveAllUnlocked writes all sagas to a specific path without locking
+// saveAllUnlocked writes all sagas to a specific path without locking.
+// Uses atomic write (temp file + rename) to prevent data loss on crash.
 func (s *Store) saveAllUnlocked(path string, sagas []*saga.Saga) error {
-	file, err := os.Create(path)
+	dir := filepath.Dir(path)
+
+	// Write to temp file in same directory (ensures same filesystem for atomic rename)
+	tmp, err := os.CreateTemp(dir, "saga-*.tmp")
 	if err != nil {
-		return fmt.Errorf("creating store: %w", err)
+		return fmt.Errorf("creating temp file: %w", err)
 	}
-	defer file.Close()
+	tmpPath := tmp.Name()
 
 	for _, sg := range sagas {
 		data, err := json.Marshal(sg)
 		if err != nil {
+			tmp.Close()
+			os.Remove(tmpPath)
 			return fmt.Errorf("encoding saga: %w", err)
 		}
-		if _, err := file.Write(data); err != nil {
+		if _, err := tmp.Write(data); err != nil {
+			tmp.Close()
+			os.Remove(tmpPath)
 			return fmt.Errorf("writing saga: %w", err)
 		}
-		if _, err := file.WriteString("\n"); err != nil {
+		if _, err := tmp.WriteString("\n"); err != nil {
+			tmp.Close()
+			os.Remove(tmpPath)
 			return fmt.Errorf("writing newline: %w", err)
 		}
+	}
+
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("closing temp file: %w", err)
+	}
+
+	// Atomic replace — rename is atomic on same filesystem
+	if err := os.Rename(tmpPath, path); err != nil {
+		os.Remove(tmpPath)
+		return fmt.Errorf("renaming temp file: %w", err)
 	}
 
 	return nil
