@@ -11,7 +11,11 @@ import (
 // Config holds saga configuration
 type Config struct {
 	ClaimDuration string `json:"claim_duration,omitempty"` // e.g. "24h", "4h30m", "72h"
+	TitleWidth    int    `json:"title_width,omitempty"`    // column width for TITLE in list/ready/search tables
 }
+
+// DefaultTitleWidth is the fallback when config is unset or zero
+const DefaultTitleWidth = 60
 
 // DefaultClaimDuration is the fallback when config is unset or invalid
 const DefaultClaimDuration = 24 * time.Hour
@@ -27,6 +31,15 @@ func (c *Config) ParsedClaimDuration() time.Duration {
 		return DefaultClaimDuration
 	}
 	return d
+}
+
+// EffectiveTitleWidth returns the configured title column width.
+// Falls back to DefaultTitleWidth if unset or zero.
+func (c *Config) EffectiveTitleWidth() int {
+	if c.TitleWidth <= 0 {
+		return DefaultTitleWidth
+	}
+	return c.TitleWidth
 }
 
 // LoadConfig reads config from the .saga directory (local first, then global).
@@ -96,4 +109,17 @@ func (s *Store) ClaimDuration() time.Duration {
 		return DefaultClaimDuration
 	}
 	return cfg.ParsedClaimDuration()
+}
+
+// TitleWidth returns the effective title column width for this store,
+// reading from config with fallback to DefaultTitleWidth.
+func (s *Store) TitleWidth() int {
+	cfg, err := s.LoadConfig()
+	if err != nil {
+		return DefaultTitleWidth
+	}
+	if cfg.TitleWidth <= 0 {
+		return DefaultTitleWidth
+	}
+	return cfg.TitleWidth
 }

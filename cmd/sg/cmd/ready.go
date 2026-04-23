@@ -14,8 +14,12 @@ import (
 
 var readyTake bool
 
-// Column widths for ready table (no STATUS column since all are active)
-var readyWidths = []int{10, 44, 5, 5, 13, 18}
+// readyWidths returns column widths for the ready table (no STATUS column since all are active),
+// using the configurable title width from the store config.
+func readyWidths(st *store.Store) []int {
+	tw := st.TitleWidth()
+	return []int{10, tw, 5, 5, 13, 18}
+}
 
 var readyCmd = &cobra.Command{
 	Use:   "ready",
@@ -95,7 +99,7 @@ Examples:
 		// Print table header
 		printTableHeader(
 			[]string{"ID", "TITLE", "PRI", "DUE", "LABELS", "CLAIM"},
-			readyWidths,
+			readyWidths(st),
 		)
 
 		for _, sg := range ready {
@@ -135,7 +139,7 @@ Examples:
 				labelsStr,
 				claimStr,
 			}
-			printTableRow(cells, readyWidths, "")
+			printTableRow(cells, readyWidths(st), "")
 		}
 
 		return nil

@@ -15,8 +15,12 @@ var (
 	searchPriority string
 )
 
-// Column widths for search table (no CLAIM column, compact format)
-var searchWidths = []int{10, 42, 7, 5, 5, 5, 13}
+// searchWidths returns column widths for the search table (no CLAIM column, compact format),
+// using the configurable title width from the store config.
+func searchWidths(st *store.Store) []int {
+	tw := st.TitleWidth()
+	return []int{10, tw, 7, 5, 5, 5, 13}
+}
 
 var searchCmd = &cobra.Command{
 	Use:   "search <query>",
@@ -106,7 +110,7 @@ Examples:
 		// Print table header
 		printTableHeader(
 			[]string{"ID", "TITLE", "STATUS", "PRI", "DATE", "DUE", "LABELS"},
-			searchWidths,
+			searchWidths(st),
 		)
 
 		for _, sg := range matches {
@@ -131,7 +135,7 @@ Examples:
 				formatDeadline(sg.Deadline),
 				labelsStr,
 			}
-			printTableRow(cells, searchWidths, "")
+			printTableRow(cells, searchWidths(st), "")
 		}
 
 		return nil

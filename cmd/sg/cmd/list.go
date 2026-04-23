@@ -23,8 +23,12 @@ var (
 	mineFilter    bool
 )
 
-// Column widths for list table
-var listWidths = []int{10, 34, 7, 5, 5, 5, 13, 18}
+// listWidths returns column widths for the list table, using the
+// configurable title width from the store config.
+func listWidths(st *store.Store) []int {
+	tw := st.TitleWidth()
+	return []int{10, tw, 7, 5, 5, 5, 13, 18}
+}
 
 var listCmd = &cobra.Command{
 	Use:   "list",
@@ -87,7 +91,7 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 		// Print table header
 		printTableHeader(
 			[]string{"ID", "TITLE", "STATUS", "PRI", "DATE", "DUE", "LABELS", "CLAIM"},
-			listWidths,
+			listWidths(st),
 		)
 
 		// Build parent lookup
@@ -97,6 +101,9 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 				children[sg.ParentID] = append(children[sg.ParentID], sg)
 			}
 		}
+
+		// Compute column widths (title width is configurable)
+		widths := listWidths(st)
 
 		// Print root sagas and their children
 		for _, sg := range sagas {
@@ -121,7 +128,7 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			if mineFilter && !isMine(sg, claimDuration) {
 				continue
 			}
-			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, claimDuration)
+			printSagaWithIndent(sg, 0, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, claimDuration, widths)
 		}
 
 		return nil
@@ -130,10 +137,10 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 
 const maxDisplayDepth = 50
 
-func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, claimDuration time.Duration) {
+func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[string][]*saga.Saga, labelFilter string, statusFilter string, priorityFilter string, mineFilter bool, claimDuration time.Duration, widths []int) {
 	if indent > maxDisplayDepth {
 		titleStr := strings.Repeat("  ", indent) + "↳ " + "[Max depth reached]"
-		printTableRow([]string{sg.ID, titleStr, "", "", "", "", "", ""}, listWidths, "")
+		printTableRow([]string{sg.ID, titleStr, "", "", "", "", "", ""}, widths, "")
 		return
 	}
 
@@ -176,7 +183,7 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		claimStr,
 	}
 
-	printTableRow(cells, listWidths, "")
+	printTableRow(cells, widths, "")
 
 	for _, child := range children[sg.ID] {
 		if !showAll && child.Status != saga.StatusActive {
@@ -194,7 +201,7 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 		if mineFilter && !isMine(child, claimDuration) {
 			continue
 		}
-		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, claimDuration)
+		printSagaWithIndent(child, indent+1, showAll, children, labelFilter, statusFilter, priorityFilter, mineFilter, claimDuration, widths)
 	}
 }
 
