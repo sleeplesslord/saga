@@ -110,7 +110,7 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			if sg.ParentID != "" {
 				continue
 			}
-			if !showAll && sg.Status != saga.StatusActive {
+			if !showAll && statusFilter == "" && sg.Status != saga.StatusActive {
 				continue
 			}
 			if labelFilter != "" && !sg.HasLabel(labelFilter) {
@@ -186,7 +186,7 @@ func printSagaWithIndent(sg *saga.Saga, indent int, showAll bool, children map[s
 	printTableRow(cells, widths, "")
 
 	for _, child := range children[sg.ID] {
-		if !showAll && child.Status != saga.StatusActive {
+		if !showAll && statusFilter == "" && child.Status != saga.StatusActive {
 			continue
 		}
 		if labelFilter != "" && !child.HasLabel(labelFilter) {
