@@ -37,6 +37,9 @@ func printSagaFields(sg *saga.Saga, labelWidth int, labelsJoined bool) {
 	if sg.Description != "" {
 		printField("Description:", formatDescription(sg.Description), labelWidth)
 	}
+	if sg.Plan != "" {
+		printField("Plan:", formatDescription(sg.Plan), labelWidth)
+	}
 	if sg.Priority != saga.PriorityNormal {
 		printField("Priority:", string(sg.Priority), labelWidth)
 	}

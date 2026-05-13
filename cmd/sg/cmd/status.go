@@ -30,6 +30,9 @@ var statusCmd = &cobra.Command{
 		if sg.Description != "" {
 			printField("Description:", formatDescription(sg.Description), 0)
 		}
+		if sg.Plan != "" {
+			printField("Plan:", formatDescription(sg.Plan), 0)
+		}
 		if sg.IsSubSaga() {
 			fmt.Printf("Parent: %s\n", sg.ParentID)
 		}

@@ -11,21 +11,24 @@ import (
 
 var editTitle string
 var editDesc string
+var editPlan string
 var editDeadline string
 var editPriority string
 
 var editCmd = &cobra.Command{
 	Use:   "edit <id>",
-	Short: "Edit saga title, description, deadline, or priority",
-	Long: `Update a saga's title, description, deadline, or priority after creation.
+	Short: "Edit saga title, description, plan, deadline, or priority",
+	Long: `Update a saga's title, description, plan, deadline, or priority after creation.
 
 Use --title to change the title, --desc to change the description,
---deadline to set/clear deadline, --priority to change priority.
+--plan to change the implementation plan, --deadline to set/clear deadline,
+--priority to change priority.
 At least one flag must be provided.
 
 Examples:
   sg edit abc123 --title "New title"
   sg edit abc123 --desc "Updated description"
+  sg edit abc123 --plan "1. Add migration\n2. Update model\n3. Add tests"
   sg edit abc123 --deadline 20250415
   sg edit abc123 --deadline ""         # clear deadline
   sg edit abc123 --priority high
@@ -37,10 +40,11 @@ Examples:
 		// Validate at least one edit flag provided
 		titleChanged := cmd.Flags().Changed("title")
 		descChanged := cmd.Flags().Changed("desc")
+		planChanged := cmd.Flags().Changed("plan")
 		deadlineChanged := cmd.Flags().Changed("deadline")
 		priorityChanged := cmd.Flags().Changed("priority")
-		if !titleChanged && !descChanged && !deadlineChanged && !priorityChanged {
-			return fmt.Errorf("at least one of --title, --desc, --deadline, or --priority required")
+		if !titleChanged && !descChanged && !planChanged && !deadlineChanged && !priorityChanged {
+			return fmt.Errorf("at least one of --title, --desc, --plan, --deadline, or --priority required")
 		}
 
 		// Reject empty title — clearing a title is not allowed
@@ -68,6 +72,11 @@ Examples:
 			sg.Description = editDesc // empty string clears description
 			sg.UpdatedAt = time.Now()
 			sg.AddHistory("edited", "Updated description")
+		}
+		if planChanged {
+			sg.Plan = editPlan // empty string clears plan
+			sg.UpdatedAt = time.Now()
+			sg.AddHistory("edited", "Updated plan")
 		}
 		if deadlineChanged {
 			sg.Deadline = editDeadline // empty string clears deadline
@@ -97,6 +106,7 @@ Examples:
 func init() {
 	editCmd.Flags().StringVar(&editTitle, "title", "", "New title")
 	editCmd.Flags().StringVar(&editDesc, "desc", "", "New description")
+	editCmd.Flags().StringVar(&editPlan, "plan", "", "Implementation plan (empty to clear)")
 	editCmd.Flags().StringVar(&editDeadline, "deadline", "", "Set deadline (YYYYMMDD) or empty to clear")
 	editCmd.Flags().StringVar(&editPriority, "priority", "", "Set priority (high, normal, low)")
 	rootCmd.AddCommand(editCmd)

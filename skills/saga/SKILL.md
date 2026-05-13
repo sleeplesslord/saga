@@ -10,7 +10,8 @@ Integration with [Saga](https://github.com/sleeplesslord/saga) task management s
 ## What is Saga
 
 Saga is a hierarchical task tracker with:
-- **Sagas** - Tasks/projects with titles, descriptions, status, priority
+- **Sagas** - Tasks/projects with titles, descriptions, plans, status, priority
+- **Plans** - Implementation details separate from description (what/why vs how)
 - **Sub-sagas** - Parent/child relationships (parent.1, parent.2)
 - **Labels** - Tags for filtering
 - **Dependencies** - Hard blocking dependencies
@@ -20,7 +21,8 @@ Saga is a hierarchical task tracker with:
 
 ## Quick Reference
 
-### Commands
+
+## Commands
 
 ```bash
 # Read context (DO THIS FIRST)
@@ -45,6 +47,7 @@ sg ready --take                    # Claim the top ready saga
 sg new "title"                     # Create saga
 sg new "title" --parent <id>       # Create sub-saga (blocked if parent done/wontdo)
 sg new "title" --label bug --priority high --desc "details"
+sg new "title" --plan "1. Step one\n2. Step two"
 sg new "title" --deadline 20250415  # Set deadline (YYYYMMDD)
 
 # Complete or abandon
@@ -72,9 +75,15 @@ sg depend <id> add|remove <target>
 sg relate <id> add|remove <target>
 sg edit <id> --title "New title"
 sg edit <id> --desc "New description"
+sg edit <id> --plan "Implementation plan"  # Set/edit plan
+sg edit <id> --plan ""                      # Clear plan
 sg edit <id> --deadline 20250415   # Set/edit deadline
 sg edit <id> --deadline ""          # Clear deadline
 sg edit <id> --priority high|normal|low
+sg plan <id>                       # View plan
+sg plan <id> "Implementation steps" # Set plan
+sg plan <id> --file plan.md        # Set plan from file
+sg plan <id> --clear               # Remove plan
 sg log <id> "progress note"        # Log work
 sg log <id> --file notes.md        # Log from file
 
@@ -296,6 +305,50 @@ sg label def456 add urgent
 sg search "" --label urgent
 ```
 
+## Plan Field: Description vs Plan
+
+The `Plan` field stores *how* you'll implement a task, separate from `Description` which stores *what* and *why*. This separation keeps task context clean while giving agents a natural place to track implementation strategy.
+
+**Description**: Problem statement, requirements, acceptance criteria, user-facing context
+**Plan**: Implementation steps, technical approach, architecture decisions, execution order
+
+### When to set a plan
+
+- **On creation** for well-scoped tasks where the approach is known:
+  ```bash
+  sg new "Add password reset" --plan "1. Add reset token model\n2. POST /auth/reset endpoint\n3. Email integration\n4. Tests"
+  ```
+- **After reading context** for tasks where you need to explore first:
+  ```bash
+  sg context abc123        # Understand the task
+  sg plan abc123 "Use existing email service, add token table to auth schema"
+  ```
+- **When approach changes** — update the plan, don't edit the description:
+  ```bash
+  sg plan abc123 "Switched to OTP approach after discovering email rate limits"
+  ```
+
+### When NOT to set a plan
+
+- Simple/trivial tasks where the approach is obvious (just `sg log` progress)
+- Tasks where you're still exploring and don't have a clear approach yet (log findings instead)
+- When the description already fully captures the implementation (no duplication)
+
+### Plan vs log
+
+- **`sg plan`** — *intended* approach, persists across sessions, updated when strategy changes
+- **`sg log`** — *actual* progress and decisions, append-only timeline
+
+Plans can be revised. Logs are history. Use both: set the plan, then log as you execute it.
+
+### Reading plans
+
+Plans appear in `sg status`, `sg context`, and `sg context --format json` (as `saga.plan`). The dedicated `sg plan <id>` command is the quickest way to view just the plan.
+
+### Clearing plans
+
+Once a task is done, plans are kept for reference (part of the saga record). If a plan becomes stale during active work, clear it with `sg plan <id> --clear` or set a new one.
+
 ## Key Principles
 
 1. **Context First** - Always read `sg context` before working
@@ -305,6 +358,7 @@ sg search "" --label urgent
 5. **Wontdo for Abandonment** - Use `sg wontdo` (not `sg done`) for rejected/obsoleted work
 6. **Sub-sagas for Detail** - Break large work into hierarchical sub-tasks
 7. **Human Coordination** - Saga is the bridge between human planning and agent execution
+8. **Plan Separately from Description** - Description = what & why; Plan = how. Use `sg plan` for implementation details so they don't clutter the task description.
 
 ## Error Handling
 

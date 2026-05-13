@@ -13,6 +13,7 @@ var (
 	labels      []string
 	priority    string
 	description string
+	plan        string
 	deadline    string
 )
 
@@ -89,6 +90,11 @@ Examples:
 			sg.Description = description
 		}
 
+		// Set plan if specified
+		if plan != "" {
+			sg.Plan = plan
+		}
+
 		// Set deadline if specified
 		if deadline != "" {
 			sg.Deadline = deadline
@@ -108,6 +114,7 @@ func init() {
 	newCmd.Flags().StringArrayVar(&labels, "label", nil, "Add label (can specify multiple)")
 	newCmd.Flags().StringVar(&priority, "priority", "", "Set priority (high, normal, low)")
 	newCmd.Flags().StringVar(&description, "desc", "", "Add description")
+	newCmd.Flags().StringVar(&plan, "plan", "", "Implementation plan")
 	newCmd.Flags().StringVar(&deadline, "deadline", "", "Set deadline (YYYYMMDD format)")
 	rootCmd.AddCommand(newCmd)
 }

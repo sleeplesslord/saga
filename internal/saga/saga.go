@@ -34,6 +34,7 @@ type Saga struct {
 	ParentID    string    `json:"parent_id,omitempty"`
 	Title       string    `json:"title"`
 	Description string    `json:"description,omitempty"`
+	Plan        string    `json:"plan,omitempty"`
 	Status      Status    `json:"status"`
 	Priority    Priority  `json:"priority,omitempty"`
 	Labels      []string  `json:"labels,omitempty"`
