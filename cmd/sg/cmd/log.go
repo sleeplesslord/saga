@@ -13,8 +13,9 @@ import (
 var logFile string
 
 var logCmd = &cobra.Command{
-	Use:   "log <id> [message]",
-	Short: "Add a work log entry to a saga",
+	Use:     "log <id> [message]",
+	Aliases: []string{"comment"},
+	Short:   "Add a work log entry to a saga",
 	Long: `Add a custom log entry to a saga's history. Useful for tracking work progress,
 decisions, or notes during development.
 

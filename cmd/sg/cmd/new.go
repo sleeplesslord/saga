@@ -18,8 +18,9 @@ var (
 )
 
 var newCmd = &cobra.Command{
-	Use:   "new <title>",
-	Short: "Create a new saga",
+	Use:     "new <title>",
+	Aliases: []string{"add", "create"},
+	Short:   "Create a new saga",
 	Long: `Create a new saga. Use --parent to create a sub-saga, --label to add labels.
 
 Examples:

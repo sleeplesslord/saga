@@ -16,8 +16,9 @@ var (
 )
 
 var claimCmd = &cobra.Command{
-	Use:   "claim <id> [id...]",
-	Short: "Claim saga for work",
+	Use:     "claim <id> [id...]",
+	Aliases: []string{"assign"},
+	Short:   "Claim saga for work",
 	Long: `Mark a saga as claimed by you to prevent others from working on it.
 
 Claim duration defaults to the configured value (see .saga/config.json),
@@ -90,8 +91,9 @@ Examples:
 }
 
 var unclaimCmd = &cobra.Command{
-	Use:   "unclaim <id> [id...]",
-	Short: "Release claim on a saga",
+	Use:     "unclaim <id> [id...]",
+	Aliases: []string{"unassign", "release"},
+	Short:   "Release claim on a saga",
 	Long: `Release your claim on a saga so others can work on it.
 
 Multiple IDs can be provided to unclaim several sagas at once.

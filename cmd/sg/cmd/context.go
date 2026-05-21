@@ -14,8 +14,9 @@ import (
 var contextFormat string
 
 var contextCmd = &cobra.Command{
-	Use:   "context <id>",
-	Short: "Show full saga context",
+	Use:     "context <id>",
+	Aliases: []string{"show"},
+	Short:   "Show full saga context",
 	Long: `Display complete context for a saga including relationships, dependencies, and history.
 
 Useful for agents to understand the full picture before acting.

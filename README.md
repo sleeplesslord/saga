@@ -184,6 +184,8 @@ Quick overview:
 
 Run `sg <command> --help` for detailed usage of any command.
 
+Common aliases (LLM-friendly): `add`/`create`→`new`, `show`→`context`, `update`→`edit`, `complete`/`finish`→`done`, `cancel`/`skip`→`wontdo`, `assign`→`claim`, `unassign`/`release`→`unclaim`, `ls`→`list`, `todo`→`ready`, `resume`→`continue`, `comment`→`log`.
+
 ## Integration with Runes
 
 [Runes](https://github.com/sleeplesslord/runes) is a separate knowledge management tool that integrates with Saga:

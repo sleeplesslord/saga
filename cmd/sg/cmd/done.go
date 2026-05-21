@@ -17,8 +17,9 @@ var (
 )
 
 var doneCmd = &cobra.Command{
-	Use:   "done <id> [id...]",
-	Short: "Mark saga as complete",
+	Use:     "done <id> [id...]",
+	Aliases: []string{"complete", "finish"},
+	Short:   "Mark saga as complete",
 	Long: `Mark a saga as done. By default, cannot mark a saga as done if it has active sub-sagas.
 Use --force to override this check.
 Use --cascade to also mark all active sub-sagas as done.
