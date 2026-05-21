@@ -14,8 +14,9 @@ var wontdoCascade bool
 var wontdoQuiet bool
 
 var wontdoCmd = &cobra.Command{
-	Use:   "wontdo <id>",
-	Short: "Mark saga as won't-do",
+	Use:     "wontdo <id>",
+	Aliases: []string{"cancel", "skip"},
+	Short:   "Mark saga as won't-do",
 	Long: `Mark a saga as won't-do — a terminal state distinct from "done".
 
 Use for sagas that were abandoned, rejected, or obsoleted.

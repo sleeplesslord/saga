@@ -22,8 +22,9 @@ func readyWidths(st *store.Store) []int {
 }
 
 var readyCmd = &cobra.Command{
-	Use:   "ready",
-	Short: "List sagas ready to work on",
+	Use:     "ready",
+	Aliases: []string{"todo"},
+	Short:   "List sagas ready to work on",
 	Long: `Show active sagas that are not blocked by dependencies, children, or claims from others.
 
 This helps you find what you can start working on right now.

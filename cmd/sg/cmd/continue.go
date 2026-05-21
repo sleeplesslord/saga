@@ -9,8 +9,9 @@ import (
 )
 
 var continueCmd = &cobra.Command{
-	Use:   "continue <id>",
-	Short: "Resume a paused saga",
+	Use:     "continue <id>",
+	Aliases: []string{"resume"},
+	Short:   "Resume a paused saga",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		id := args[0]

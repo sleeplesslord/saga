@@ -16,8 +16,9 @@ var editDeadline string
 var editPriority string
 
 var editCmd = &cobra.Command{
-	Use:   "edit <id>",
-	Short: "Edit saga title, description, plan, deadline, or priority",
+	Use:     "edit <id>",
+	Aliases: []string{"update"},
+	Short:   "Edit saga title, description, plan, deadline, or priority",
 	Long: `Update a saga's title, description, plan, deadline, or priority after creation.
 
 Use --title to change the title, --desc to change the description,

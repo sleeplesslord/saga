@@ -31,8 +31,9 @@ func listWidths(st *store.Store) []int {
 }
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List sagas",
+	Use:     "list",
+	Aliases: []string{"ls"},
+	Short:   "List sagas",
 	Long: `List sagas. When a local .saga/ exists, shows local sagas by default.
 Use --global to include global sagas. Use flags to filter by scope, status, label, or priority.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
