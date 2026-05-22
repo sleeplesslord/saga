@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/sleeplesslord/saga/cmd/sg/cmd"
+	"github.com/sleeplesslord/saga/cmd/saga/cmd"
 )
 
 func main() {

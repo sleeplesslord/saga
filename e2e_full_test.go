@@ -25,7 +25,7 @@ func NewTestRunner(t *testing.T) *TestRunner {
 	}
 
 	binaryPath := filepath.Join(wd, "sg_test")
-	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/sg")
+	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/saga")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("Failed to build binary: %v\n%s", err, output)
 	}
@@ -344,7 +344,7 @@ func TestAllCommands(t *testing.T) {
 	})
 
 	t.Run("Ready", func(t *testing.T) {
-		// Test that sg ready respects parent blocking
+		// Test that saga ready respects parent blocking
 		// Create a blocked parent with a child
 		stdout, _, err := runner.Run("new", "Blocked parent saga")
 		if err != nil {
@@ -376,7 +376,7 @@ func TestAllCommands(t *testing.T) {
 			t.Fatalf("Failed to create child saga: %v", err)
 		}
 
-		// Now check sg ready - child should NOT appear because parent is blocked
+		// Now check saga ready - child should NOT appear because parent is blocked
 		stdout, _, err = runner.Run("ready")
 		if err != nil {
 			t.Fatalf("Failed to run ready command: %v", err)

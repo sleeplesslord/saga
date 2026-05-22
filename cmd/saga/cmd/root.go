@@ -7,7 +7,7 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "sg",
+	Use:   "saga",
 	Short: "Saga - Task management for agent workflows",
 	Long: `Saga is a task management tool designed for agent workflows.
 

@@ -23,9 +23,9 @@ func NewRunesTestRunner(t *testing.T) *RunesTestRunner {
 
 	// Build saga binary
 	sagaBin := filepath.Join(wd, "sg_test")
-	exec.Command("go", "build", "-o", sagaBin, "./cmd/sg").Run()
+	exec.Command("go", "build", "-o", sagaBin, "./cmd/saga").Run()
 
-	// Build runes binary (from runes repo) - name it 'runes' so sg context can find it
+	// Build runes binary (from runes repo) - name it 'runes' so saga context can find it
 	runesBin := filepath.Join(wd, "runes")
 	exec.Command("go", "build", "-o", runesBin, "../runes/cmd/runes").Run()
 
@@ -50,7 +50,7 @@ func (r *RunesTestRunner) Cleanup() {
 func (r *RunesTestRunner) RunSaga(args ...string) (string, error) {
 	cmd := exec.Command(r.SagaBinary, args...)
 	cmd.Dir = r.TempDir
-	// Add runes binary directory to PATH so sg context can find it
+	// Add runes binary directory to PATH so saga context can find it
 	cmd.Env = append(os.Environ(), "PATH="+filepath.Dir(r.RunesBinary)+":"+os.Getenv("PATH"))
 	out, err := cmd.CombinedOutput()
 	return string(out), err

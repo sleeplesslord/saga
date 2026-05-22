@@ -16,28 +16,28 @@ Most task trackers are built for human teams. Saga is built for **human-agent co
 
 ```bash
 # Install
-go install github.com/sleeplesslord/saga/cmd/sg@latest
+go install github.com/sleeplesslord/saga/cmd/saga@latest
 
 # Initialize project storage
 cd my-project
-sg init
+saga init
 
 # Create a saga
-sg new "Implement feature X" --desc "Details here" --priority high
+saga new "Implement feature X" --desc "Details here" --priority high
 
 # Break it down
-sg new "Write tests" --parent <id>
-sg new "Handle edge cases" --parent <id>
+saga new "Write tests" --parent <id>
+saga new "Handle edge cases" --parent <id>
 
 # See what's ready to work on
-sg ready
+saga ready
 
 # Claim and work
-sg ready --take              # Claim the top ready saga
-sg log <id> "Started implementation"
+saga ready --take              # Claim the top ready saga
+saga log <id> "Started implementation"
 
 # Mark done
-sg done <id> --reason "All tests passing"
+saga done <id> --reason "All tests passing"
 ```
 
 ## Core Concepts
@@ -59,8 +59,8 @@ A saga is a task or project. It has:
 | Status | Meaning | Transitions |
 |--------|---------|-------------|
 | `active` | Work in progress | → `done`, `wontdo`, `paused` |
-| `paused` | Temporarily set aside | → `active` (via `sg continue`) |
-| `done` | Completed | → `active` (via `sg reopen`) |
+| `paused` | Temporarily set aside | → `active` (via `saga continue`) |
+| `done` | Completed | → `active` (via `saga reopen`) |
 | `wontdo` | Abandoned/rejected/obsoleted | Terminal — no reversal |
 
 Key distinction: `done` means "completed successfully." `wontdo` means "we're not doing this." Both are terminal, but `wontdo` is **non-blocking** — other sagas that depend on a wontdo saga can still be completed.
@@ -70,9 +70,9 @@ Key distinction: `done` means "completed successfully." `wontdo` means "we're no
 Break large work into pieces:
 
 ```bash
-sg new "Parent task"                # Creates abc123
-sg new "Sub-task 1" --parent abc123 # Creates abc123.1
-sg new "Sub-task 2" --parent abc123 # Creates abc123.2
+saga new "Parent task"                # Creates abc123
+saga new "Sub-task 1" --parent abc123 # Creates abc123.1
+saga new "Sub-task 2" --parent abc123 # Creates abc123.2
 ```
 
 Hierarchical IDs make relationships obvious: `parent.1`, `parent.2`, etc.
@@ -85,18 +85,18 @@ Hierarchical IDs make relationships obvious: `parent.1`, `parent.2`, etc.
 Hard dependencies block completion:
 
 ```bash
-sg depend abc123 add def456    # abc123 blocked until def456 is done
-sg done def456                 # Now abc123 can be completed
+saga depend abc123 add def456    # abc123 blocked until def456 is done
+saga done def456                 # Now abc123 can be completed
 ```
 
-- Incomplete dependencies block `sg done` (shown as ✗ BLOCKING)
+- Incomplete dependencies block `saga done` (shown as ✗ BLOCKING)
 - Wontdo dependencies are non-blocking (shown as ⊘ wontdo)
 - Done dependencies are satisfied (shown as ✓ done)
 
 Soft relationships (informational only, no blocking):
 
 ```bash
-sg relate abc123 add def456    # Link related work
+saga relate abc123 add def456    # Link related work
 ```
 
 ### Claims
@@ -104,10 +104,10 @@ sg relate abc123 add def456    # Link related work
 Prevent duplicate work across agents:
 
 ```bash
-sg claim abc123                # Mark as "in progress" for your session
-sg claim abc123 --duration 4h  # Custom duration
-sg list --unclaimed            # Find available work
-sg unclaim abc123              # Release claim
+saga claim abc123                # Mark as "in progress" for your session
+saga claim abc123 --duration 4h  # Custom duration
+saga list --unclaimed            # Find available work
+saga unclaim abc123              # Release claim
 ```
 
 Claims are session-based using `user@ppid` identity:
@@ -121,17 +121,17 @@ Saga supports both global and project-local storage:
 
 | Scope | Location | When Used |
 |-------|----------|-----------|
-| Local | `./.saga/` | When `sg init` has been run in the project |
+| Local | `./.saga/` | When `saga init` has been run in the project |
 | Global | `~/.saga/` | Always available as fallback |
 
-Sagas are saved to local by default when a local store exists. `sg list` shows local sagas by default; use `--global` to include global sagas.
+Sagas are saved to local by default when a local store exists. `saga list` shows local sagas by default; use `--global` to include global sagas.
 
 ```bash
-sg init                        # Create local .saga/ in project
-sg new "Local task"            # Saved in ./.saga/
-sg list --local               # Project only
-sg list --global              # Global only
-sg list                       # Both (default when in project)
+saga init                        # Create local .saga/ in project
+saga new "Local task"            # Saved in ./.saga/
+saga list --local               # Project only
+saga list --global              # Global only
+saga list                       # Both (default when in project)
 ```
 
 ## Agent Workflow
@@ -140,20 +140,20 @@ Saga shines when agents use it systematically:
 
 ### Before Starting
 
-1. **Find work**: `sg ready` — see what's unblocked and unclaimed
-2. **Read context**: `sg context <id>` — understand hierarchy, dependencies, claims
+1. **Find work**: `saga ready` — see what's unblocked and unclaimed
+2. **Read context**: `saga context <id>` — understand hierarchy, dependencies, claims
 3. **Check knowledge** *(optional)*: `runes search "problem"` — has this been solved before?
 
 ### During Work
 
-1. **Claim**: `sg claim <id>` — prevent duplicate work
-2. **Log**: `sg log <id> "progress"` — track decisions and progress
-3. **Decompose**: `sg new "Sub-task" --parent <id>` — break down complex work
+1. **Claim**: `saga claim <id>` — prevent duplicate work
+2. **Log**: `saga log <id> "progress"` — track decisions and progress
+3. **Decompose**: `saga new "Sub-task" --parent <id>` — break down complex work
 
 ### Completing Work
 
-1. **Mark done**: `sg done <id>` — complete the saga
-2. **Or abandon**: `sg wontdo <id> --reason "why"` — for rejected/obsoleted work
+1. **Mark done**: `saga done <id>` — complete the saga
+2. **Or abandon**: `saga wontdo <id> --reason "why"` — for rejected/obsoleted work
 3. **Capture knowledge** *(optional)*: `runes add "Solution" --saga <id>`
 
 ### Reopening Work
@@ -161,7 +161,7 @@ Saga shines when agents use it systematically:
 If a done saga needs more work:
 
 ```bash
-sg reopen <id> --reason "Bug found in implementation"
+saga reopen <id> --reason "Bug found in implementation"
 ```
 
 Only `done` sagas can be reopened (not `wontdo`).
@@ -174,15 +174,15 @@ Quick overview:
 
 | Category | Commands |
 |----------|----------|
-| Create | `sg new`, `sg init` |
-| View | `sg list`, `sg status`, `sg context`, `sg search`, `sg ready` |
-| Modify | `sg edit`, `sg label`, `sg priority`, `sg log` |
-| Complete | `sg done`, `sg wontdo`, `sg reopen` |
-| Coordinate | `sg claim`, `sg unclaim`, `sg depend`, `sg relate` |
-| Configure | `sg config` |
-| Status change | `sg continue` |
+| Create | `saga new`, `saga init` |
+| View | `saga list`, `saga status`, `saga context`, `saga search`, `saga ready` |
+| Modify | `saga edit`, `saga label`, `saga priority`, `saga log` |
+| Complete | `saga done`, `saga wontdo`, `saga reopen` |
+| Coordinate | `saga claim`, `saga unclaim`, `saga depend`, `saga relate` |
+| Configure | `saga config` |
+| Status change | `saga continue` |
 
-Run `sg <command> --help` for detailed usage of any command.
+Run `saga <command> --help` for detailed usage of any command.
 
 Common aliases (LLM-friendly): `add`/`create`→`new`, `show`→`context`, `update`→`edit`, `complete`/`finish`→`done`, `cancel`/`skip`→`wontdo`, `assign`→`claim`, `unassign`/`release`→`unclaim`, `ls`→`list`, `todo`→`ready`, `resume`→`continue`, `comment`→`log`.
 
@@ -192,7 +192,7 @@ Common aliases (LLM-friendly): `add`/`create`→`new`, `show`→`context`, `upda
 
 ```bash
 # In saga: see linked knowledge
-sg context <id>
+saga context <id>
 # KNOWLEDGE (Runes)
 #   • xr5h - Fixed auth timeout [auth-timeout-retry]
 
@@ -200,13 +200,13 @@ sg context <id>
 runes add "Auth fix" --saga <id>
 ```
 
-Pattern: Saga tracks *doing*, Runes tracks *knowing*. When `sg done` detects runes is installed, it suggests capturing knowledge.
+Pattern: Saga tracks *doing*, Runes tracks *knowing*. When `saga done` detects runes is installed, it suggests capturing knowledge.
 
 ## Architecture
 
 ```
 saga/
-├── cmd/sg/           # CLI (cobra commands)
+├── cmd/saga/          # CLI (cobra commands)
 │   └── cmd/          # One file per command
 ├── internal/
 │   ├── saga/         # Core types (Status, Priority, Saga struct)
@@ -215,7 +215,7 @@ saga/
 
 Storage:
 - Global: ~/.saga/sagas.jsonl
-- Local: ./.saga/sagas.jsonl (if sg init)
+- Local: ./.saga/sagas.jsonl (if saga init)
 - Format: JSON Lines (append-only)
 - Config: .saga/config.json (local), ~/.saga/config.json (global)
 

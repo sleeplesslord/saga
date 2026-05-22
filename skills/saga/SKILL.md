@@ -26,71 +26,71 @@ Saga is a hierarchical task tracker with:
 
 ```bash
 # Read context (DO THIS FIRST)
-sg context <id>                    # Full human-readable context
-sg context <id> --format json      # Machine-readable for agents
+saga context <id>                    # Full human-readable context
+saga context <id> --format json      # Machine-readable for agents
 
 # Search and list
-sg list                            # Active sagas (local-only if .saga/ exists)
-sg list --global                   # Include global sagas
-sg list --status active|paused|done|wontdo
-sg list --priority high|normal|low
-sg list --mine                     # Your claimed sagas
-sg list --unclaimed                # Unclaimed only
-sg search "query"                  # Search titles/IDs/descriptions
-sg status <id>                     # Brief status
+saga list                            # Active sagas (local-only if .saga/ exists)
+saga list --global                   # Include global sagas
+saga list --status active|paused|done|wontdo
+saga list --priority high|normal|low
+saga list --mine                     # Your claimed sagas
+saga list --unclaimed                # Unclaimed only
+saga search "query"                  # Search titles/IDs/descriptions
+saga status <id>                     # Brief status
 
 # Ready queue (ready-to-work)
-sg ready                           # Unclaimed, unblocked, no active children
-sg ready --take                    # Claim the top ready saga
+saga ready                           # Unclaimed, unblocked, no active children
+saga ready --take                    # Claim the top ready saga
 
 # Create and update
-sg new "title"                     # Create saga
-sg new "title" --parent <id>       # Create sub-saga (blocked if parent done/wontdo)
-sg new "title" --label bug --priority high --desc "details"
-sg new "title" --plan "1. Step one\n2. Step two"
-sg new "title" --deadline 20250415  # Set deadline (YYYYMMDD)
+saga new "title"                     # Create saga
+saga new "title" --parent <id>       # Create sub-saga (blocked if parent done/wontdo)
+saga new "title" --label bug --priority high --desc "details"
+saga new "title" --plan "1. Step one\n2. Step two"
+saga new "title" --deadline 20250415  # Set deadline (YYYYMMDD)
 
 # Complete or abandon
-sg done <id> [<id> ...]           # Mark complete (multiple IDs)
-sg done <id> --cascade             # Mark all active sub-sagas done first
-sg done <id> --reason "why"        # Log reason in history
-sg done <id> --quiet               # Suppress runes hint
-sg done <id> --force               # Force completion despite blockers
-sg wontdo <id> [--id ...] --reason "why"  # Abandon/reject/obsolete
-sg wontdo <id> --cascade           # Mark all active sub-sagas as wontdo
-sg wontdo <id> --quiet             # Suppress runes hint
+saga done <id> [<id> ...]           # Mark complete (multiple IDs)
+saga done <id> --cascade             # Mark all active sub-sagas done first
+saga done <id> --reason "why"        # Log reason in history
+saga done <id> --quiet               # Suppress runes hint
+saga done <id> --force               # Force completion despite blockers
+saga wontdo <id> [--id ...] --reason "why"  # Abandon/reject/obsolete
+saga wontdo <id> --cascade           # Mark all active sub-sagas as wontdo
+saga wontdo <id> --quiet             # Suppress runes hint
 
 # Reopen
-sg reopen <id>                     # Reopen a done saga (sets back to active)
-sg reopen <id> --reason "why"     # Reopen with reason logged in history
+saga reopen <id>                     # Reopen a done saga (sets back to active)
+saga reopen <id> --reason "why"     # Reopen with reason logged in history
 
 # Claiming
-sg claim <id> [<id> ...]           # Claim saga(s) for your session
-sg claim <id> --duration 4h        # Custom claim duration
-sg unclaim <id> [<id> ...]         # Release claim(s)
+saga claim <id> [<id> ...]           # Claim saga(s) for your session
+saga claim <id> --duration 4h        # Custom claim duration
+saga unclaim <id> [<id> ...]         # Release claim(s)
 
 # Modify
-sg label <id> add|remove <label>
-sg depend <id> add|remove <target>
-sg relate <id> add|remove <target>
-sg edit <id> --title "New title"
-sg edit <id> --desc "New description"
-sg edit <id> --plan "Implementation plan"  # Set/edit plan
-sg edit <id> --plan ""                      # Clear plan
-sg edit <id> --deadline 20250415   # Set/edit deadline
-sg edit <id> --deadline ""          # Clear deadline
-sg edit <id> --priority high|normal|low
-sg plan <id>                       # View plan
-sg plan <id> "Implementation steps" # Set plan
-sg plan <id> --file plan.md        # Set plan from file
-sg plan <id> --clear               # Remove plan
-sg log <id> "progress note"        # Log work
-sg log <id> --file notes.md        # Log from file
+saga label <id> add|remove <label>
+saga depend <id> add|remove <target>
+saga relate <id> add|remove <target>
+saga edit <id> --title "New title"
+saga edit <id> --desc "New description"
+saga edit <id> --plan "Implementation plan"  # Set/edit plan
+saga edit <id> --plan ""                      # Clear plan
+saga edit <id> --deadline 20250415   # Set/edit deadline
+saga edit <id> --deadline ""          # Clear deadline
+saga edit <id> --priority high|normal|low
+saga plan <id>                       # View plan
+saga plan <id> "Implementation steps" # Set plan
+saga plan <id> --file plan.md        # Set plan from file
+saga plan <id> --clear               # Remove plan
+saga log <id> "progress note"        # Log work
+saga log <id> --file notes.md        # Log from file
 
 # Configuration
-sg config                          # Show current config
-sg config --claim-duration 4h      # Set local default claim duration
-sg config --scope global --claim-duration 4h  # Set global default
+saga config                          # Show current config
+saga config --claim-duration 4h      # Set local default claim duration
+saga config --scope global --claim-duration 4h  # Set global default
 ```
 
 ## Agent Workflow
@@ -99,14 +99,14 @@ sg config --scope global --claim-duration 4h  # Set global default
 
 1. **Check if saga exists** for this task:
    ```bash
-   sg search "task name"
+   saga search "task name"
    ```
 
 2. **If saga exists**, read context:
    ```bash
-   sg context <id> --format json
+   saga context <id> --format json
    ```
-   - Check status (if done, can `sg reopen`; if wontdo, ask user)
+   - Check status (if done, can `saga reopen`; if wontdo, ask user)
    - Check dependencies (wontdo = ⊘ non-blocking, incomplete = ✗ BLOCKING)
    - Check parent/child relationships
    - Check claim status (yours = [mine], other session = claimed by other)
@@ -114,14 +114,14 @@ sg config --scope global --claim-duration 4h  # Set global default
 
 3. **If no saga exists**, ask user to create one or create it:
    ```bash
-   sg new "Implement feature X" --desc "Details from user"
+   saga new "Implement feature X" --desc "Details from user"
    ```
 
 ### Finding Ready Work
 
 ```bash
-sg ready              # Show sagas ready for you to work on
-sg ready --take       # Claim the top ready saga automatically
+saga ready              # Show sagas ready for you to work on
+saga ready --take       # Claim the top ready saga automatically
 ```
 
 "Ready" means: not claimed by another session, not blocked by incomplete dependencies, no active children. Your own claims show as [mine].
@@ -130,20 +130,20 @@ sg ready --take       # Claim the top ready saga automatically
 
 **Claim the saga first:**
 ```bash
-sg claim <id>           # Claims for your session (user@ppid)
-sg claim <id> --duration 4h  # Custom duration
+saga claim <id>           # Claims for your session (user@ppid)
+saga claim <id> --duration 4h  # Custom duration
 ```
 
 **Log progress regularly:**
 ```bash
-sg log <id> "Started implementation"
-sg log <id> "Decided on approach Y due to Z"
-sg log <id> "Hit blocker: waiting for API"
+saga log <id> "Started implementation"
+saga log <id> "Decided on approach Y due to Z"
+saga log <id> "Hit blocker: waiting for API"
 ```
 
 **Check if blocked:**
 ```bash
-sg context <id>
+saga context <id>
 # Look for:
 # - ✗ BLOCKING dependencies (incomplete)
 # - ⊘ wontdo dependencies (non-blocking, terminal)
@@ -152,8 +152,8 @@ sg context <id>
 
 **Create sub-sagas for large work:**
 ```bash
-sg new "Sub-task 1" --parent <parent-id>
-sg new "Sub-task 2" --parent <parent-id>
+saga new "Sub-task 1" --parent <parent-id>
+saga new "Sub-task 2" --parent <parent-id>
 ```
 Note: Cannot create sub-sagas under done or wontdo parents.
 
@@ -161,41 +161,41 @@ Note: Cannot create sub-sagas under done or wontdo parents.
 
 1. **Check all sub-sagas are done:**
    ```bash
-   sg context <id>
+   saga context <id>
    # Verify no active children
    ```
 
 2. **Check all dependencies are done:**
    ```bash
-   sg context <id>
+   saga context <id>
    # Verify no ✗ BLOCKING dependencies (⊘ wontdo is OK)
    ```
 
 3. **Mark as done:**
    ```bash
-   sg done <id>
+   saga done <id>
    ```
    Or mark multiple at once:
    ```bash
-   sg done abc123 def456
+   saga done abc123 def456
    ```
    With cascade (completes all sub-sagas first):
    ```bash
-   sg done <id> --cascade
+   saga done <id> --cascade
    ```
 
    If blocked but user wants to force:
    ```bash
-   sg done <id> --force
+   saga done <id> --force
    ```
 
 ### Abandoning Work
 
 For sagas that are abandoned, rejected, or obsoleted (not "completed"):
 ```bash
-sg wontdo <id> --reason "Requirements changed"
-sg wontdo <id> --cascade            # Also marks active sub-sagas as wontdo
-sg wontdo <id> --quiet               # Suppress runes hint
+saga wontdo <id> --reason "Requirements changed"
+saga wontdo <id> --cascade            # Also marks active sub-sagas as wontdo
+saga wontdo <id> --quiet               # Suppress runes hint
 ```
 
 Wontdo is a terminal state (like done) but semantically distinct. It is non-blocking in dependency checks (shown as ⊘ wontdo).
@@ -204,8 +204,8 @@ Wontdo is a terminal state (like done) but semantically distinct. It is non-bloc
 
 For sagas that were marked done but need more work:
 ```bash
-sg reopen <id>                     # Sets status back to active
-sg reopen <id> --reason "Bug found in implementation"
+saga reopen <id>                     # Sets status back to active
+saga reopen <id> --reason "Bug found in implementation"
 ```
 
 Only `done` sagas can be reopened (not `wontdo`). The reason is logged in history.
@@ -216,15 +216,15 @@ Claims are session-based using `user@ppid` identity:
 - Same ppid = same session = "mine"
 - Different ppid = different session = "claimed by other"
 - Claims have an expiry time (shown in listings)
-- Default duration: configured value (see `sg config`) or 24h fallback
+- Default duration: configured value (see `saga config`) or 24h fallback
 
 **Config resolution for claim duration:**
 `--duration` flag > local config (.saga/config.json) > global config (~/.saga/config.json) > 24h default
 
 ```bash
-sg config                            # View current config
-sg config --claim-duration 4h        # Set local default
-sg config --scope global --claim-duration 4h  # Set global default
+saga config                            # View current config
+saga config --claim-duration 4h        # Set local default
+saga config --scope global --claim-duration 4h  # Set global default
 ```
 
 ## Common Patterns
@@ -233,76 +233,76 @@ sg config --scope global --claim-duration 4h  # Set global default
 
 ```bash
 # Task B depends on Task A
-sg new "Task A"                              # Creates abc123
-sg new "Task B"                              # Creates def456
-sg depend def456 add abc123                  # B depends on A
+saga new "Task A"                              # Creates abc123
+saga new "Task B"                              # Creates def456
+saga depend def456 add abc123                  # B depends on A
 
 # Later, mark A done first
-sg done abc123
-sg done def456                               # Now works
+saga done abc123
+saga done def456                               # Now works
 ```
 
 ### Pattern: Dependency with Abandonment
 
 ```bash
 # Task B depends on Task A, but A is abandoned
-sg new "Task A"                              # Creates abc123
-sg new "Task B"                              # Creates def456
-sg depend def456 add abc123                  # B depends on A
+saga new "Task A"                              # Creates abc123
+saga new "Task B"                              # Creates def456
+saga depend def456 add abc123                  # B depends on A
 
-sg wontdo abc123 --reason "No longer needed"
+saga wontdo abc123 --reason "No longer needed"
 # abc123 shows as ⊘ wontdo in def456's context (non-blocking)
-sg done def456                               # Works because wontdo is terminal
+saga done def456                               # Works because wontdo is terminal
 ```
 
 ### Pattern: Sub-task Decomposition
 
 ```bash
 # Parent saga
-sg new "Build auth system"                   # Creates abc123
+saga new "Build auth system"                   # Creates abc123
 
 # Sub-tasks
-sg new "OAuth integration" --parent abc123   # Creates abc123.1
-sg new "Session management" --parent abc123  # Creates abc123.2
-sg new "Password reset" --parent abc123      # Creates abc123.3
+saga new "OAuth integration" --parent abc123   # Creates abc123.1
+saga new "Session management" --parent abc123  # Creates abc123.2
+saga new "Password reset" --parent abc123      # Creates abc123.3
 
 # Work on sub-tasks
-sg done abc123.1
-sg done abc123.2
-sg done abc123.3
+saga done abc123.1
+saga done abc123.2
+saga done abc123.3
 
 # Complete parent
-sg done abc123                               # Works when all children done
+saga done abc123                               # Works when all children done
 ```
 
 ### Pattern: Cascade Completion
 
 ```bash
 # Complete parent and all sub-sagas at once
-sg done abc123 --cascade --reason "All work verified"
+saga done abc123 --cascade --reason "All work verified"
 ```
 
 ### Pattern: Claim and Ready Queue
 
 ```bash
 # Find available work
-sg ready                    # Shows unclaimed, unblocked sagas
-sg ready --take             # Claim the top one and start working
+saga ready                    # Shows unclaimed, unblocked sagas
+saga ready --take             # Claim the top one and start working
 
 # Claim specific sagas
-sg claim abc123 def456      # Claim multiple at once
-sg claim abc123 --duration 2h  # Short claim for quick task
+saga claim abc123 def456      # Claim multiple at once
+saga claim abc123 --duration 2h  # Short claim for quick task
 ```
 
 ### Pattern: Label-based Filtering
 
 ```bash
 # Tag sagas
-sg label abc123 add urgent
-sg label def456 add urgent
+saga label abc123 add urgent
+saga label def456 add urgent
 
 # View urgent only
-sg search "" --label urgent
+saga search "" --label urgent
 ```
 
 ## Plan Field: Description vs Plan
@@ -316,49 +316,49 @@ The `Plan` field stores *how* you'll implement a task, separate from `Descriptio
 
 - **On creation** for well-scoped tasks where the approach is known:
   ```bash
-  sg new "Add password reset" --plan "1. Add reset token model\n2. POST /auth/reset endpoint\n3. Email integration\n4. Tests"
+  saga new "Add password reset" --plan "1. Add reset token model\n2. POST /auth/reset endpoint\n3. Email integration\n4. Tests"
   ```
 - **After reading context** for tasks where you need to explore first:
   ```bash
-  sg context abc123        # Understand the task
-  sg plan abc123 "Use existing email service, add token table to auth schema"
+  saga context abc123        # Understand the task
+  saga plan abc123 "Use existing email service, add token table to auth schema"
   ```
 - **When approach changes** — update the plan, don't edit the description:
   ```bash
-  sg plan abc123 "Switched to OTP approach after discovering email rate limits"
+  saga plan abc123 "Switched to OTP approach after discovering email rate limits"
   ```
 
 ### When NOT to set a plan
 
-- Simple/trivial tasks where the approach is obvious (just `sg log` progress)
+- Simple/trivial tasks where the approach is obvious (just `saga log` progress)
 - Tasks where you're still exploring and don't have a clear approach yet (log findings instead)
 - When the description already fully captures the implementation (no duplication)
 
 ### Plan vs log
 
-- **`sg plan`** — *intended* approach, persists across sessions, updated when strategy changes
-- **`sg log`** — *actual* progress and decisions, append-only timeline
+- **`saga plan`** — *intended* approach, persists across sessions, updated when strategy changes
+- **`saga log`** — *actual* progress and decisions, append-only timeline
 
 Plans can be revised. Logs are history. Use both: set the plan, then log as you execute it.
 
 ### Reading plans
 
-Plans appear in `sg status`, `sg context`, and `sg context --format json` (as `saga.plan`). The dedicated `sg plan <id>` command is the quickest way to view just the plan.
+Plans appear in `saga status`, `saga context`, and `saga context --format json` (as `saga.plan`). The dedicated `saga plan <id>` command is the quickest way to view just the plan.
 
 ### Clearing plans
 
-Once a task is done, plans are kept for reference (part of the saga record). If a plan becomes stale during active work, clear it with `sg plan <id> --clear` or set a new one.
+Once a task is done, plans are kept for reference (part of the saga record). If a plan becomes stale during active work, clear it with `saga plan <id> --clear` or set a new one.
 
 ## Key Principles
 
-1. **Context First** - Always read `sg context` before working
-2. **Claim Your Work** - Use `sg claim` so other agents know you're on it
-3. **Log Early and Often** - Use `sg log` for decisions and progress
+1. **Context First** - Always read `saga context` before working
+2. **Claim Your Work** - Use `saga claim` so other agents know you're on it
+3. **Log Early and Often** - Use `saga log` for decisions and progress
 4. **Dependencies Explicit** - Add blocking dependencies so completion checks work
-5. **Wontdo for Abandonment** - Use `sg wontdo` (not `sg done`) for rejected/obsoleted work
+5. **Wontdo for Abandonment** - Use `saga wontdo` (not `saga done`) for rejected/obsoleted work
 6. **Sub-sagas for Detail** - Break large work into hierarchical sub-tasks
 7. **Human Coordination** - Saga is the bridge between human planning and agent execution
-8. **Plan Separately from Description** - Description = what & why; Plan = how. Use `sg plan` for implementation details so they don't clutter the task description.
+8. **Plan Separately from Description** - Description = what & why; Plan = how. Use `saga plan` for implementation details so they don't clutter the task description.
 
 ## Error Handling
 
@@ -367,7 +367,7 @@ Once a task is done, plans are kept for reference (part of the saga record). If 
 Error: saga "abc123" not found
 
 To see all sagas:
-  sg list
+  saga list
 ```
 
 ### Has Active Children
@@ -375,7 +375,7 @@ To see all sagas:
 Error: cannot mark "abc123" as done: has active sub-sagas
 
 Complete sub-sagas first, use --cascade, or:
-  sg done abc123 --force
+  saga done abc123 --force
 ```
 
 ### Incomplete Dependencies
@@ -383,8 +383,8 @@ Complete sub-sagas first, use --cascade, or:
 Error: cannot mark "abc123" as done: 1 incomplete dependencie(s): [def456]
 
 Complete these first, use --force, or mark as wontdo:
-  sg done def456
-  sg wontdo def456 --reason "No longer needed"
+  saga done def456
+  saga wontdo def456 --reason "No longer needed"
 ```
 
 ### Sub-saga Under Terminal Parent

@@ -1,6 +1,6 @@
 # Saga CLI Reference
 
-Complete reference for all `sg` commands.
+Complete reference for all `saga` commands.
 
 ## Global
 
@@ -13,7 +13,7 @@ All commands work with both global (`~/.saga/`) and local (`./.saga/`) stores.
 Initialize local saga storage in current directory.
 
 ```bash
-sg init
+saga init
 ```
 
 Creates `./.saga/sagas.jsonl` for project-scoped sagas.
@@ -24,16 +24,16 @@ Create a new saga or sub-saga.
 
 ```bash
 # Root saga
-sg new "Implement feature"
+saga new "Implement feature"
 
 # With options
-sg new "Fix bug" --desc "Detailed description" --label bug --priority high
+saga new "Fix bug" --desc "Detailed description" --label bug --priority high
 
 # Sub-saga (hierarchical ID: parent.1, parent.2)
-sg new "Sub-task" --parent abc123
+saga new "Sub-task" --parent abc123
 
 # With deadline
-sg new "Ship feature" --deadline 20250415
+saga new "Ship feature" --deadline 20250415
 ```
 
 **Flags:**
@@ -48,19 +48,19 @@ sg new "Ship feature" --deadline 20250415
 List sagas with filtering. Default scope is local-only when `.saga/` exists; use `--global` to include global sagas.
 
 ```bash
-sg list                            # Active sagas (local-only if .saga/ exists)
-sg list --global                   # Include global sagas
-sg list --all                      # Include done/wontdo sagas
-sg list --status active            # Filter by status
-sg list --status paused
-sg list --status done
-sg list --status wontdo
-sg list --priority high            # Filter by priority
-sg list --priority normal
-sg list --priority low
-sg list --mine                     # Your claimed sagas (same ppid session)
-sg list --unclaimed                # Unclaimed only
-sg list --label bug                # Filter by label
+saga list                            # Active sagas (local-only if .saga/ exists)
+saga list --global                   # Include global sagas
+saga list --all                      # Include done/wontdo sagas
+saga list --status active            # Filter by status
+saga list --status paused
+saga list --status done
+saga list --status wontdo
+saga list --priority high            # Filter by priority
+saga list --priority normal
+saga list --priority low
+saga list --mine                     # Your claimed sagas (same ppid session)
+saga list --unclaimed                # Unclaimed only
+saga list --label bug                # Filter by label
 ```
 
 **Sorting:** By deadline (soonest first), then priority (high → normal → low), then updated time.
@@ -75,8 +75,8 @@ Show sagas that are ready to work on. Excludes:
 - Sagas with active children
 
 ```bash
-sg ready                           # Show ready sagas
-sg ready --take                    # Claim the top ready saga
+saga ready                           # Show ready sagas
+saga ready --take                    # Claim the top ready saga
 ```
 
 **Sorting:** By deadline (soonest first), then priority (high → normal → low), then updated time.
@@ -88,7 +88,7 @@ sg ready --take                    # Claim the top ready saga
 Show saga details.
 
 ```bash
-sg status abc123
+saga status abc123
 ```
 
 Shows: ID, title, description, status, priority, labels, parent/children counts, claim info, recent history.
@@ -100,8 +100,8 @@ Shows: ID, title, description, status, priority, labels, parent/children counts,
 Show full context including hierarchy, dependencies, and relationships.
 
 ```bash
-sg context abc123              # Human-readable
-sg context abc123 --format json   # Machine-readable
+saga context abc123              # Human-readable
+saga context abc123 --format json   # Machine-readable
 ```
 
 **Output includes:**
@@ -122,12 +122,12 @@ sg context abc123 --format json   # Machine-readable
 Mark saga(s) as complete.
 
 ```bash
-sg done abc123                          # Mark done (checks children/deps)
-sg done abc123 def456                   # Mark multiple done
-sg done abc123 --cascade               # Mark all active sub-sagas as done first
-sg done abc123 --reason "Verified"     # Log reason in history
-sg done abc123 --quiet                 # Suppress runes hint (auto-suppressed in non-TTY)
-sg done abc123 --force                 # Force completion despite blockers
+saga done abc123                          # Mark done (checks children/deps)
+saga done abc123 def456                   # Mark multiple done
+saga done abc123 --cascade               # Mark all active sub-sagas as done first
+saga done abc123 --reason "Verified"     # Log reason in history
+saga done abc123 --quiet                 # Suppress runes hint (auto-suppressed in non-TTY)
+saga done abc123 --force                 # Force completion despite blockers
 ```
 
 **Flags:**
@@ -145,10 +145,10 @@ sg done abc123 --force                 # Force completion despite blockers
 Mark saga(s) as abandoned/rejected/obsoleted. Distinct terminal state from "done".
 
 ```bash
-sg wontdo abc123 --reason "Requirements changed"
-sg wontdo abc123 def456               # Mark multiple as wontdo
-sg wontdo abc123 --cascade            # Mark all active sub-sagas as wontdo
-sg wontdo abc123 --quiet              # Suppress runes hint
+saga wontdo abc123 --reason "Requirements changed"
+saga wontdo abc123 def456               # Mark multiple as wontdo
+saga wontdo abc123 --cascade            # Mark all active sub-sagas as wontdo
+saga wontdo abc123 --quiet              # Suppress runes hint
 ```
 
 **Flags:**
@@ -167,7 +167,7 @@ sg wontdo abc123 --quiet              # Suppress runes hint
 Resume a paused saga.
 
 ```bash
-sg continue abc123
+saga continue abc123
 ```
 
 ### log
@@ -175,8 +175,8 @@ sg continue abc123
 Add work log entry.
 
 ```bash
-sg log abc123 "Progress note"
-sg log abc123 --file notes.md
+saga log abc123 "Progress note"
+saga log abc123 --file notes.md
 ```
 
 Appears in saga history.
@@ -186,8 +186,8 @@ Appears in saga history.
 Manage labels.
 
 ```bash
-sg label abc123 add bug
-sg label abc123 remove bug
+saga label abc123 add bug
+saga label abc123 remove bug
 ```
 
 ### priority
@@ -195,9 +195,9 @@ sg label abc123 remove bug
 Change priority.
 
 ```bash
-sg priority abc123 high
-sg priority abc123 normal
-sg priority abc123 low
+saga priority abc123 high
+saga priority abc123 normal
+saga priority abc123 low
 ```
 
 ### depend
@@ -205,8 +205,8 @@ sg priority abc123 low
 Manage hard dependencies (blocking).
 
 ```bash
-sg depend abc123 add def456     # abc123 now depends on def456
-sg depend abc123 remove def456  # Remove dependency
+saga depend abc123 add def456     # abc123 now depends on def456
+saga depend abc123 remove def456  # Remove dependency
 ```
 
 **Blocks completion** until target is done or wontdo.
@@ -218,8 +218,8 @@ sg depend abc123 remove def456  # Remove dependency
 Manage soft relationships (informational).
 
 ```bash
-sg relate abc123 add def456     # Mark as related
-sg relate abc123 remove def456  # Remove relationship
+saga relate abc123 add def456     # Mark as related
+saga relate abc123 remove def456  # Remove relationship
 ```
 
 **Does not block** completion. For reference only.
@@ -229,9 +229,9 @@ sg relate abc123 remove def456  # Remove relationship
 Claim saga(s) for your session. Claim identity is `user@ppid` (session-based).
 
 ```bash
-sg claim abc123                       # Claim for your session
-sg claim abc123 def456                # Claim multiple sagas
-sg claim abc123 --duration 4h         # Custom claim duration
+saga claim abc123                       # Claim for your session
+saga claim abc123 def456                # Claim multiple sagas
+saga claim abc123 --duration 4h         # Custom claim duration
 ```
 
 **Flags:**
@@ -246,8 +246,8 @@ sg claim abc123 --duration 4h         # Custom claim duration
 Release claim(s) on saga(s).
 
 ```bash
-sg unclaim abc123                    # Release claim
-sg unclaim abc123 def456             # Release multiple claims
+saga unclaim abc123                    # Release claim
+saga unclaim abc123 def456             # Release multiple claims
 ```
 
 ### edit
@@ -255,11 +255,11 @@ sg unclaim abc123 def456             # Release multiple claims
 Edit saga properties.
 
 ```bash
-sg edit abc123 --title "New title"
-sg edit abc123 --desc "New description"
-sg edit abc123 --deadline 20250415   # Set/edit deadline
-sg edit abc123 --deadline ""          # Clear deadline
-sg edit abc123 --priority high        # Set priority
+saga edit abc123 --title "New title"
+saga edit abc123 --desc "New description"
+saga edit abc123 --deadline 20250415   # Set/edit deadline
+saga edit abc123 --deadline ""          # Clear deadline
+saga edit abc123 --priority high        # Set priority
 ```
 
 **Flags:**
@@ -273,9 +273,9 @@ sg edit abc123 --priority high        # Set priority
 View and set configuration.
 
 ```bash
-sg config                            # Show current config
-sg config --claim-duration 4h        # Set default claim duration (local)
-sg config --scope global --claim-duration 4h  # Set in ~/.saga/config.json
+saga config                            # Show current config
+saga config --claim-duration 4h        # Set default claim duration (local)
+saga config --scope global --claim-duration 4h  # Set in ~/.saga/config.json
 ```
 
 **Flags:**
@@ -291,15 +291,15 @@ Search sagas.
 
 ```bash
 # Text search
-sg search "auth"                    # Search titles/IDs/descriptions
+saga search "auth"                    # Search titles/IDs/descriptions
 
 # Filter only
-sg search "" --label bug            # All with bug label
-sg search "" --status active        # All active
-sg search "" --priority high        # All high priority
+saga search "" --label bug            # All with bug label
+saga search "" --status active        # All active
+saga search "" --priority high        # All high priority
 
 # Combined
-sg search "fix" --label urgent --status active
+saga search "fix" --label urgent --status active
 ```
 
 ## Status Values
@@ -319,7 +319,7 @@ sg search "fix" --label urgent --status active
 ## File Locations
 
 - Global: `~/.saga/sagas.jsonl`
-- Local: `./.saga/sagas.jsonl` (if `sg init` run)
+- Local: `./.saga/sagas.jsonl` (if `saga init` run)
 - Local config: `./.saga/config.json`
 - Global config: `~/.saga/config.json`
 
