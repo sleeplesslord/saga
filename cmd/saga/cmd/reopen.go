@@ -65,6 +65,6 @@ The saga will be set back to "active" status and added to history.`,
 }
 
 func init() {
-	reopenCmd.Flags().StringVar(&reopenReason, "reason", "", "Reason for reopening the saga (logged in history)")
+	reopenCmd.Flags().StringVarP(&reopenReason, "reason", "m", "", "Reason for reopening the saga (logged in history)")
 	rootCmd.AddCommand(reopenCmd)
 }

@@ -121,7 +121,7 @@ func isRunesInstalled() bool {
 
 func init() {
 	doneCmd.Flags().BoolVar(&force, "force", false, "Force completion even with active children")
-	doneCmd.Flags().StringVar(&doneReason, "reason", "", "Reason for closing the saga (logged in history)")
+	doneCmd.Flags().StringVarP(&doneReason, "reason", "m", "", "Reason for closing the saga (logged in history)")
 	doneCmd.Flags().BoolVar(&doneQuiet, "quiet", false, "Suppress hints and non-essential output")
 	doneCmd.Flags().BoolVar(&doneCascade, "cascade", false, "Also mark all active sub-sagas as done")
 	rootCmd.AddCommand(doneCmd)

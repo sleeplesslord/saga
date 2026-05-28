@@ -114,7 +114,7 @@ func init() {
 	newCmd.Flags().StringVar(&parentID, "parent", "", "Parent saga ID (creates sub-saga)")
 	newCmd.Flags().StringArrayVar(&labels, "label", nil, "Add label (can specify multiple)")
 	newCmd.Flags().StringVar(&priority, "priority", "", "Set priority (high, normal, low)")
-	newCmd.Flags().StringVar(&description, "desc", "", "Add description")
+	newCmd.Flags().StringVarP(&description, "desc", "d", "", "Add description")
 	newCmd.Flags().StringVar(&plan, "plan", "", "Implementation plan")
 	newCmd.Flags().StringVar(&deadline, "deadline", "", "Set deadline (YYYYMMDD format)")
 	rootCmd.AddCommand(newCmd)
