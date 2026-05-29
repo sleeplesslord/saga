@@ -120,6 +120,47 @@ func (s *Store) removeFromLabelIndex(sg *saga.Saga) {
 	}
 }
 
+// planFilePath returns the path to a saga's plan file.
+// Plans are stored as .saga/plans/<id>.md alongside the JSONL file.
+func planFilePath(sagaDir, id string) string {
+	return filepath.Join(sagaDir, "plans", id+".md")
+}
+
+// writePlanFile writes plan content to a .saga/plans/<id>.md file.
+// Creates the plans/ directory if it doesn't exist.
+func writePlanFile(sagaDir, id, content string) error {
+	planDir := filepath.Join(sagaDir, "plans")
+	if err := os.MkdirAll(planDir, 0755); err != nil {
+		return fmt.Errorf("creating plans directory: %w", err)
+	}
+	return os.WriteFile(planFilePath(sagaDir, id), []byte(content), 0644)
+}
+
+// deletePlanFile removes a saga's plan file.
+// Returns nil if the file doesn't exist (idempotent).
+func deletePlanFile(sagaDir, id string) error {
+	err := os.Remove(planFilePath(sagaDir, id))
+	if os.IsNotExist(err) {
+		return nil
+	}
+	return err
+}
+
+// loadPlanFiles reads plan files from .saga/plans/ and populates
+// each saga's Plan field. Plan files take precedence over any
+// Plan value already in the struct (e.g. from old JSONL data),
+// providing automatic migration on load.
+func loadPlanFiles(sagaDir string, sagas []*saga.Saga) {
+	planDir := filepath.Join(sagaDir, "plans")
+	for _, sg := range sagas {
+		data, err := os.ReadFile(filepath.Join(planDir, sg.ID+".md"))
+		if err == nil {
+			sg.Plan = string(data)
+		}
+		// If no plan file exists, keep whatever Plan value came from JSONL
+	}
+}
+
 // New creates a new Store with global path, auto-detects local
 func New(globalPath string) (*Store, error) {
 	// Ensure global directory exists
@@ -331,6 +372,9 @@ func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
 		sagas = append(sagas, &sg)
 	}
 
+	// Load plan files — they override any Plan from JSONL (backward compat)
+	loadPlanFiles(filepath.Dir(path), sagas)
+
 	return sagas, scanner.Err()
 }
 
@@ -382,13 +426,24 @@ func (s *Store) Save(sg *saga.Saga, scope ...Scope) error {
 		}
 	}
 
+	// Write plan to separate file, keep JSONL lean
+	sagaDir := filepath.Dir(path)
+	if sg.Plan != "" {
+		if err := writePlanFile(sagaDir, sg.ID, sg.Plan); err != nil {
+			return fmt.Errorf("writing plan file: %w", err)
+		}
+	}
+
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("opening store: %w", err)
 	}
 	defer file.Close()
 
-	data, err := json.Marshal(sg)
+	// Marshal without plan — plan lives in .saga/plans/<id>.md
+	copy := *sg
+	copy.Plan = ""
+	data, err := json.Marshal(&copy)
 	if err != nil {
 		return fmt.Errorf("encoding saga: %w", err)
 	}
@@ -491,13 +546,31 @@ func (s *Store) loadFromPathUnlocked(path string) ([]*saga.Saga, error) {
 		sagas = append(sagas, &sg)
 	}
 
+	// Load plan files — they override any Plan from JSONL (backward compat)
+	loadPlanFiles(filepath.Dir(path), sagas)
+
 	return sagas, scanner.Err()
 }
 
 // saveAllUnlocked writes all sagas to a specific path without locking.
 // Uses atomic write (temp file + rename) to prevent data loss on crash.
+// Plans are written to .saga/plans/<id>.md and stripped from JSONL.
 func (s *Store) saveAllUnlocked(path string, sagas []*saga.Saga) error {
 	dir := filepath.Dir(path)
+
+	// Write plan files first (before JSONL rewrite)
+	for _, sg := range sagas {
+		if sg.Plan != "" {
+			if err := writePlanFile(dir, sg.ID, sg.Plan); err != nil {
+				return fmt.Errorf("writing plan file for %s: %w", sg.ID, err)
+			}
+		} else {
+			// Plan was cleared — remove the plan file if it exists
+			if err := deletePlanFile(dir, sg.ID); err != nil {
+				return fmt.Errorf("deleting plan file for %s: %w", sg.ID, err)
+			}
+		}
+	}
 
 	// Write to temp file in same directory (ensures same filesystem for atomic rename)
 	tmp, err := os.CreateTemp(dir, "saga-*.tmp")
@@ -507,7 +580,10 @@ func (s *Store) saveAllUnlocked(path string, sagas []*saga.Saga) error {
 	tmpPath := tmp.Name()
 
 	for _, sg := range sagas {
-		data, err := json.Marshal(sg)
+		// Marshal without plan — plan lives in .saga/plans/<id>.md
+		copy := *sg
+		copy.Plan = ""
+		data, err := json.Marshal(&copy)
 		if err != nil {
 			tmp.Close()
 			os.Remove(tmpPath)

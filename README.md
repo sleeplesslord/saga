@@ -217,6 +217,7 @@ Storage:
 - Global: ~/.saga/sagas.jsonl
 - Local: ./.saga/sagas.jsonl (if saga init)
 - Format: JSON Lines (append-only)
+- Plans: .saga/plans/<id>.md (separate markdown files)
 - Config: .saga/config.json (local), ~/.saga/config.json (global)
 
 Dependencies:
