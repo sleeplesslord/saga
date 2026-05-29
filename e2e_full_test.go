@@ -450,3 +450,106 @@ func TestAllCommands(t *testing.T) {
 
 	fmt.Println("✅ All commands tested!")
 }
+
+// TestArchiveCommand runs E2E tests for the archive command
+func TestArchiveCommand(t *testing.T) {
+	runner := NewTestRunner(t)
+	defer runner.Cleanup()
+
+	// Create some sagas and mark them done
+	t.Run("Setup", func(t *testing.T) {
+		_, _, err := runner.Run("new", "Old done saga")
+		if err != nil {
+			t.Fatalf("Failed to create saga: %v", err)
+		}
+		_, _, err = runner.Run("new", "Recent done saga")
+		if err != nil {
+			t.Fatalf("Failed to create saga: %v", err)
+		}
+		_, _, err = runner.Run("new", "Active saga")
+		if err != nil {
+			t.Fatalf("Failed to saga: %v", err)
+		}
+	})
+
+	// Mark two as done
+	oldID := runner.getSagaID("Old done saga")
+	recentID := runner.getSagaID("Recent done saga")
+	activeID := runner.getSagaID("Active saga")
+
+	if oldID == "" || recentID == "" || activeID == "" {
+		t.Fatalf("Could not find saga IDs: old=%s recent=%s active=%s", oldID, recentID, activeID)
+	}
+
+	_, _, _ = runner.Run("done", oldID)
+	_, _, _ = runner.Run("done", recentID)
+
+	t.Run("DryRunDefault", func(t *testing.T) {
+		// Default 30 days: nothing archived since sagas are brand new
+		stdout, _, err := runner.Run("archive", "--dry-run")
+		if err != nil {
+			t.Fatalf("Archive dry-run failed: %v", err)
+		}
+		if !strings.Contains(stdout, "would be archived") && !strings.Contains(stdout, "no sagas") {
+			t.Errorf("Unexpected dry-run output: %s", stdout)
+		}
+	})
+
+	t.Run("DryRunZeroDays", func(t *testing.T) {
+		// With --days 0, all done sagas should be candidates
+		stdout, _, err := runner.Run("archive", "--dry-run", "--days", "0")
+		if err != nil {
+			t.Fatalf("Archive dry-run --days 0 failed: %v", err)
+		}
+		if !strings.Contains(stdout, "2") {
+			t.Errorf("Expected 2 sagas to be archived, got: %s", stdout)
+		}
+	})
+
+	t.Run("ArchiveZeroDays", func(t *testing.T) {
+		// Actually archive with --days 0
+		stdout, _, err := runner.Run("archive", "--days", "0")
+		if err != nil {
+			t.Fatalf("Archive failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Archived 2") {
+			t.Errorf("Expected 'Archived 2', got: %s", stdout)
+		}
+	})
+
+	t.Run("ActiveSagasRemain", func(t *testing.T) {
+		// Active saga should still be in the list
+		stdout, _, err := runner.Run("list", "--all")
+		if err != nil {
+			t.Fatalf("List failed: %v", err)
+		}
+		if !strings.Contains(stdout, "Active saga") {
+			t.Errorf("Active saga should still be listed: %s", stdout)
+		}
+		// Done sagas should be gone from active list
+		if strings.Contains(stdout, "Old done saga") || strings.Contains(stdout, "Recent done saga") {
+			t.Errorf("Archived sagas should not appear in list: %s", stdout)
+		}
+	})
+
+	t.Run("ArchiveFileExists", func(t *testing.T) {
+		// Check that archive.jsonl was created
+		archivePath := filepath.Join(runner.TempDir, ".saga", "archive.jsonl")
+		if _, err := os.Stat(archivePath); os.IsNotExist(err) {
+			t.Errorf("Archive file should exist at %s", archivePath)
+		}
+	})
+
+	t.Run("IdempotentArchive", func(t *testing.T) {
+		// Running archive again should find nothing new
+		stdout, _, err := runner.Run("archive", "--days", "0")
+		if err != nil {
+			t.Fatalf("Second archive failed: %v", err)
+		}
+		if !strings.Contains(stdout, "No sagas") {
+			t.Errorf("Expected no new sagas to archive, got: %s", stdout)
+		}
+	})
+
+	fmt.Println("✅ Archive command tested!")
+}

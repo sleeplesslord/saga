@@ -17,3 +17,4 @@ vendor/
 *.swp
 *.swo
 sg_test
+saga

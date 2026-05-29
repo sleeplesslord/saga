@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 )
@@ -740,6 +741,131 @@ func (s *Store) WouldCreateCircularDependency(sagaID string, targetID string) (b
 	}
 
 	return check(targetID)
+}
+
+// archivePath returns the path to the archive JSONL file for a given scope path.
+func archivePath(jsonPath string) string {
+	dir := filepath.Dir(jsonPath)
+	return filepath.Join(dir, "archive.jsonl")
+}
+
+// Archive moves done/wontdo sagas not modified since cutoff from the active
+// JSONL to archive.jsonl. Plan files for archived sagas are moved to
+// archive/plans/. If dryRun is true, it only counts without modifying files.
+func (s *Store) Archive(scope Scope, cutoff time.Time, dryRun bool) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var path string
+	switch scope {
+	case ScopeLocal:
+		path = s.localPath
+	case ScopeGlobal:
+		path = s.globalPath
+	}
+	if path == "" {
+		return 0, nil
+	}
+
+	sagas, err := s.loadFromPathUnlocked(path)
+	if err != nil {
+		return 0, fmt.Errorf("loading sagas: %w", err)
+	}
+
+	// Separate into: keep (active/recent) and archive (terminal + old)
+	var keep, toArchive []*saga.Saga
+	for _, sg := range sagas {
+		if isTerminalStatus(sg.Status) && sg.UpdatedAt.Before(cutoff) {
+			toArchive = append(toArchive, sg)
+		} else {
+			keep = append(keep, sg)
+		}
+	}
+
+	if len(toArchive) == 0 {
+		return 0, nil
+	}
+
+	if dryRun {
+		return len(toArchive), nil
+	}
+
+	dir := filepath.Dir(path)
+	archiveDir := filepath.Join(dir, "archive")
+
+	// Ensure archive directory exists
+	if err := os.MkdirAll(archiveDir, 0755); err != nil {
+		return 0, fmt.Errorf("creating archive directory: %w", err)
+	}
+
+	// Move plan files for archived sagas to archive/plans/
+	archivePlansDir := filepath.Join(archiveDir, "plans")
+	if err := os.MkdirAll(archivePlansDir, 0755); err != nil {
+		return 0, fmt.Errorf("creating archive plans directory: %w", err)
+	}
+	for _, sg := range toArchive {
+		srcPlan := planFilePath(dir, sg.ID)
+		dstPlan := filepath.Join(archivePlansDir, sg.ID+".md")
+		if data, err := os.ReadFile(srcPlan); err == nil {
+			if err := os.WriteFile(dstPlan, data, 0644); err != nil {
+				return 0, fmt.Errorf("moving plan file for %s: %w", sg.ID, err)
+			}
+			os.Remove(srcPlan) // best-effort cleanup
+		}
+	}
+
+	// Write archive JSONL (append to existing archive file)
+	archiveFile := archivePath(path)
+	af, err := os.OpenFile(archiveFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return 0, fmt.Errorf("opening archive file: %w", err)
+	}
+	for _, sg := range toArchive {
+		copy := *sg
+		copy.Plan = "" // plan lives in archive/plans/<id>.md
+		data, err := json.Marshal(&copy)
+		if err != nil {
+			af.Close()
+			return 0, fmt.Errorf("encoding saga %s: %w", sg.ID, err)
+		}
+		if _, err := af.Write(data); err != nil {
+			af.Close()
+			return 0, fmt.Errorf("writing saga %s: %w", sg.ID, err)
+		}
+		if _, err := af.WriteString("\n"); err != nil {
+			af.Close()
+			return 0, fmt.Errorf("writing newline: %w", err)
+		}
+	}
+	if err := af.Close(); err != nil {
+		return 0, fmt.Errorf("closing archive file: %w", err)
+	}
+
+	// Rewrite active JSONL with only kept sagas
+	if err := s.saveAllUnlocked(path, keep); err != nil {
+		return 0, fmt.Errorf("rewriting active sagas: %w", err)
+	}
+
+	// Update indexes: remove archived sagas
+	if s.indexLoaded {
+		for _, sg := range toArchive {
+			delete(s.indexByID, sg.ID)
+			s.removeFromStatusIndex(sg)
+			s.removeFromLabelIndex(sg)
+			// Remove from parent index if it's a sub-saga
+			if sg.IsSubSaga() {
+				var filtered []*saga.Saga
+				for _, child := range s.indexByParent[sg.ParentID] {
+					if child.ID != sg.ID {
+						filtered = append(filtered, child)
+					}
+				}
+				s.indexByParent[sg.ParentID] = filtered
+			}
+		}
+	}
+
+	return len(toArchive), nil
 }
 
 // GetActiveSagasWithParent returns all sagas matching a parent that are active
