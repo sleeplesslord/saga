@@ -364,6 +364,7 @@ func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
 
 	var sagas []*saga.Saga
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line
 	for scanner.Scan() {
 		var sg saga.Saga
 		if err := json.Unmarshal(scanner.Bytes(), &sg); err != nil {
@@ -538,6 +539,7 @@ func (s *Store) loadFromPathUnlocked(path string) ([]*saga.Saga, error) {
 
 	var sagas []*saga.Saga
 	scanner := bufio.NewScanner(file)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024) // 1MB max line
 	for scanner.Scan() {
 		var sg saga.Saga
 		if err := json.Unmarshal(scanner.Bytes(), &sg); err != nil {
