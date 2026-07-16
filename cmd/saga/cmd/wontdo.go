@@ -109,7 +109,7 @@ func isTerminal() bool {
 }
 
 func init() {
-	wontdoCmd.Flags().StringVar(&wontdoReason, "reason", "", "Reason for won't-do (logged in history)")
+	wontdoCmd.Flags().StringVarP(&wontdoReason, "reason", "m", "", "Reason for won't-do (logged in history)")
 	wontdoCmd.Flags().BoolVar(&wontdoCascade, "cascade", false, "Also mark all active sub-sagas as wontdo")
 	wontdoCmd.Flags().BoolVar(&wontdoQuiet, "quiet", false, "Suppress hints and non-essential output")
 	rootCmd.AddCommand(wontdoCmd)

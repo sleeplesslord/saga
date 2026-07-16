@@ -106,7 +106,7 @@ Examples:
 
 func init() {
 	editCmd.Flags().StringVar(&editTitle, "title", "", "New title")
-	editCmd.Flags().StringVar(&editDesc, "desc", "", "New description")
+	editCmd.Flags().StringVarP(&editDesc, "desc", "d", "", "New description")
 	editCmd.Flags().StringVar(&editPlan, "plan", "", "Implementation plan (empty to clear)")
 	editCmd.Flags().StringVar(&editDeadline, "deadline", "", "Set deadline (YYYYMMDD) or empty to clear")
 	editCmd.Flags().StringVar(&editPriority, "priority", "", "Set priority (high, normal, low)")
