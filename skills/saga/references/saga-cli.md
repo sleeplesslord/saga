@@ -177,9 +177,15 @@ Add work log entry.
 ```bash
 saga log abc123 "Progress note"
 saga log abc123 --file notes.md
+saga log abc123 -              # read the message from stdin
+cmd | saga log abc123          # same, when no message is given
 ```
 
 Appears in saga history.
+
+Resolution order is `--file`, then `-`, then the message argument, then stdin. An
+argument wins over piped input, so pass `-` when you mean stdin. `saga plan`
+resolves its plan text the same way.
 
 ### label
 

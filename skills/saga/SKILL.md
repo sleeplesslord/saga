@@ -83,9 +83,13 @@ saga edit <id> --priority high|normal|low
 saga plan <id>                       # View plan
 saga plan <id> "Implementation steps" # Set plan
 saga plan <id> --file plan.md        # Set plan from file
+saga plan <id> - < plan.md           # Set plan from stdin
 saga plan <id> --clear               # Remove plan
 saga log <id> "progress note"        # Log work
 saga log <id> --file notes.md        # Log from file
+saga log <id> -                      # Log from stdin
+# Resolution order: --file > "-" > argument > piped stdin.
+# An argument wins over a pipe, so pass "-" when you mean stdin.
 
 # Configuration
 saga config                          # Show current config

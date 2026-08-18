@@ -70,6 +70,10 @@ saga context <id> [--format json]
 
 `--format json` outputs machine-readable JSON for agent consumption.
 
+A saga carries a `rev` field that increments on every stored change. It exists so
+a write built on a stale read can be rejected instead of silently overwriting a
+concurrent one; treat it as opaque and don't set it by hand.
+
 ### `saga search`
 
 Search sagas by title, ID, or description.
@@ -138,7 +142,13 @@ Add a work log entry to a saga's history.
 ```bash
 saga log <id> <message>
 saga log <id> --file notes.md
+saga log <id> -            # read the message from stdin
+cmd | saga log <id>        # same, when no message is given
 ```
+
+The message is resolved in this order: `--file`, then `-`, then the message
+argument, then stdin. An argument therefore wins over piped input — pass `-`
+when you mean stdin. `saga plan` resolves its plan text the same way.
 
 ## Completing Sagas
 
