@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -58,45 +59,46 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(id)
-		if err != nil {
-			return sagaNotFound(id)
-		}
-
-		// Update fields
-		if titleChanged {
-			sg.Title = editTitle
-			sg.UpdatedAt = time.Now()
-			sg.AddHistory("edited", "Updated title")
-		}
-		if descChanged {
-			sg.Description = editDesc // empty string clears description
-			sg.UpdatedAt = time.Now()
-			sg.AddHistory("edited", "Updated description")
-		}
-		if planChanged {
-			sg.Plan = editPlan // empty string clears plan
-			sg.UpdatedAt = time.Now()
-			sg.AddHistory("edited", "Updated plan")
-		}
-		if deadlineChanged {
-			sg.Deadline = editDeadline // empty string clears deadline
-		}
-		if priorityChanged {
-			switch editPriority {
-			case "high":
-				sg.SetPriority(saga.PriorityHigh)
-			case "normal":
-				sg.SetPriority(saga.PriorityNormal)
-			case "low":
-				sg.SetPriority(saga.PriorityLow)
-			default:
-				return invalidPriority(editPriority)
+		// Applied under the store lock against the freshest copy, so editing one
+		// field doesn't roll back a change another process made to a different one.
+		sg, err := st.Mutate(id, func(sg *saga.Saga) error {
+			if titleChanged {
+				sg.Title = editTitle
+				sg.UpdatedAt = time.Now()
+				sg.AddHistory("edited", "Updated title")
 			}
-		}
-
-		if err := st.Update(sg); err != nil {
-			return fmt.Errorf("updating saga: %w", err)
+			if descChanged {
+				sg.Description = editDesc // empty string clears description
+				sg.UpdatedAt = time.Now()
+				sg.AddHistory("edited", "Updated description")
+			}
+			if planChanged {
+				sg.Plan = editPlan // empty string clears plan
+				sg.UpdatedAt = time.Now()
+				sg.AddHistory("edited", "Updated plan")
+			}
+			if deadlineChanged {
+				sg.Deadline = editDeadline // empty string clears deadline
+			}
+			if priorityChanged {
+				switch editPriority {
+				case "high":
+					sg.SetPriority(saga.PriorityHigh)
+				case "normal":
+					sg.SetPriority(saga.PriorityNormal)
+				case "low":
+					sg.SetPriority(saga.PriorityLow)
+				default:
+					return invalidPriority(editPriority)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(id)
+			}
+			return err
 		}
 
 		fmt.Printf("Updated saga %s\n", sg.ID)

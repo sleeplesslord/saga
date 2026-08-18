@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -72,14 +74,15 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(id)
-		if err != nil {
-			return sagaNotFound(id)
-		}
-
-		sg.AddHistory("log", message)
-
-		if err := st.Update(sg); err != nil {
+		// Mutate re-reads the record under the store lock, so a concurrent status
+		// change (e.g. `saga done`) isn't overwritten by a stale copy.
+		if _, err := st.Mutate(id, func(sg *saga.Saga) error {
+			sg.AddHistory("log", message)
+			return nil
+		}); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(id)
+			}
 			return fmt.Errorf("updating saga: %w", err)
 		}
 

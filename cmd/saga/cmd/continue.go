@@ -21,19 +21,15 @@ var continueCmd = &cobra.Command{
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(id)
+		sg, err := st.Mutate(id, func(sg *saga.Saga) error {
+			if sg.Status == saga.StatusDone || sg.Status == saga.StatusWontDo {
+				return fmt.Errorf("saga %s is in a terminal state (%s); use \"sg reopen\" to resume it", sg.ID, sg.Status)
+			}
+			sg.SetStatus(saga.StatusActive)
+			return nil
+		})
 		if err != nil {
 			return err
-		}
-
-		if sg.Status == saga.StatusDone || sg.Status == saga.StatusWontDo {
-			return fmt.Errorf("saga %s is in a terminal state (%s); use \"sg reopen\" to resume it", sg.ID, sg.Status)
-		}
-
-		sg.SetStatus(saga.StatusActive)
-
-		if err := st.Update(sg); err != nil {
-			return fmt.Errorf("updating saga: %w", err)
 		}
 
 		fmt.Printf("Continuing saga %s: %s\n", sg.ID, sg.Title)

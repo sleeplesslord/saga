@@ -44,8 +44,9 @@ Examples:
 		}
 
 		for _, id := range ids {
-			sg, err := st.GetByID(id)
-			if err != nil {
+			// Existence is checked up front so a typo reports as "not found"
+			// rather than falling through the child/dependency checks first.
+			if _, err := st.GetByID(id); err != nil {
 				return sagaNotFound(id)
 			}
 
@@ -65,16 +66,19 @@ Examples:
 					return fmt.Errorf("getting children: %w", err)
 				}
 				for _, child := range children {
-					if child.Status == saga.StatusActive || child.Status == saga.StatusPaused {
-						child.SetStatus(saga.StatusDone)
-						if doneReason != "" {
-							child.AddHistory("completed", doneReason)
-						}
-						if err := st.Update(child); err != nil {
-							return fmt.Errorf("updating child %s: %w", child.ID, err)
-						}
-						fmt.Printf("Marked sub-saga %s as done\n", child.ID)
+					if child.Status != saga.StatusActive && child.Status != saga.StatusPaused {
+						continue
 					}
+					if _, err := st.Mutate(child.ID, func(fresh *saga.Saga) error {
+						fresh.SetStatus(saga.StatusDone)
+						if doneReason != "" {
+							fresh.AddHistory("completed", doneReason)
+						}
+						return nil
+					}); err != nil {
+						return fmt.Errorf("updating child %s: %w", child.ID, err)
+					}
+					fmt.Printf("Marked sub-saga %s as done\n", child.ID)
 				}
 			}
 
@@ -87,14 +91,16 @@ Examples:
 				return incompleteDependencies(id, incompleteDeps)
 			}
 
-			sg.SetStatus(saga.StatusDone)
-
-			// Log reason if provided
-			if doneReason != "" {
-				sg.AddHistory("completed", doneReason)
-			}
-
-			if err := st.Update(sg); err != nil {
+			// Mutate re-reads under the store lock, so a log entry another
+			// process added while we were validating isn't overwritten.
+			sg, err := st.Mutate(id, func(fresh *saga.Saga) error {
+				fresh.SetStatus(saga.StatusDone)
+				if doneReason != "" {
+					fresh.AddHistory("completed", doneReason)
+				}
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("updating saga: %w", err)
 			}
 

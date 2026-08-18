@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -67,21 +69,22 @@ Examples:
 		}
 
 		for _, id := range ids {
-			sg, err := st.GetByID(id)
-			if err != nil {
-				return sagaNotFound(id)
-			}
-
-			// Check if already claimed by a different session
-			if sg.IsClaimedWithDuration(duration) && sg.ClaimedBy != agent {
-				return fmt.Errorf("saga %s is already claimed by %s (expires %s)",
-					id, sg.ClaimedBy, sg.ClaimExpiryWithDuration(duration).Format("15:04"))
-			}
-
-			// Claim it
-			sg.ClaimWithDuration(agent, duration)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
+			// The already-claimed check has to run against the record under the
+			// store lock. A claim is a mutual-exclusion primitive: checking a copy
+			// read beforehand lets two sessions both see "unclaimed" and both win.
+			// (Identity is per-session — same agent name re-claims by design.)
+			if _, err := st.Mutate(id, func(sg *saga.Saga) error {
+				if sg.IsClaimedWithDuration(duration) && sg.ClaimedBy != agent {
+					return fmt.Errorf("saga %s is already claimed by %s (expires %s)",
+						id, sg.ClaimedBy, sg.ClaimExpiryWithDuration(duration).Format("15:04"))
+				}
+				sg.ClaimWithDuration(agent, duration)
+				return nil
+			}); err != nil {
+				if errors.Is(err, store.ErrNotFound) {
+					return sagaNotFound(id)
+				}
+				return err
 			}
 
 			fmt.Printf("Claimed saga %s for %s (expires in %s)\n", id, agent, duration)
@@ -112,20 +115,20 @@ Example:
 
 	claimDuration := st.ClaimDuration()
 
-	for _, id := range ids {
-		sg, err := st.GetByID(id)
-		if err != nil {
-			return sagaNotFound(id)
-		}
-
-		if !sg.IsClaimedWithDuration(claimDuration) {
-			return fmt.Errorf("saga %s is not claimed", id)
-		}
-
-		agent := sg.ClaimedBy
-		sg.Unclaim()
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
+		for _, id := range ids {
+			var agent string
+			if _, err := st.Mutate(id, func(sg *saga.Saga) error {
+				if !sg.IsClaimedWithDuration(claimDuration) {
+					return fmt.Errorf("saga %s is not claimed", id)
+				}
+				agent = sg.ClaimedBy
+				sg.Unclaim()
+				return nil
+			}); err != nil {
+				if errors.Is(err, store.ErrNotFound) {
+					return sagaNotFound(id)
+				}
+				return err
 			}
 
 			fmt.Printf("Released claim on saga %s (was claimed by %s)\n", id, agent)

@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -66,13 +67,16 @@ Examples:
 
 		// --clear: remove plan
 		if planClear {
-			sg.Plan = ""
-			sg.UpdatedAt = time.Now()
-			sg.AddHistory("edited", "Cleared plan")
-			if err := st.Update(sg); err != nil {
+			cleared, err := st.Mutate(id, func(sg *saga.Saga) error {
+				sg.Plan = ""
+				sg.UpdatedAt = time.Now()
+				sg.AddHistory("edited", "Cleared plan")
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("updating saga: %w", err)
 			}
-			fmt.Printf("Cleared plan for saga %s\n", sg.ID)
+			fmt.Printf("Cleared plan for saga %s\n", cleared.ID)
 			return nil
 		}
 
@@ -118,15 +122,17 @@ Examples:
 			newPlan = strings.Join(args[1:], " ")
 		}
 
-		sg.Plan = newPlan
-		sg.UpdatedAt = time.Now()
-		sg.AddHistory("edited", "Updated plan")
-
-		if err := st.Update(sg); err != nil {
+		updated, err := st.Mutate(id, func(sg *saga.Saga) error {
+			sg.Plan = newPlan
+			sg.UpdatedAt = time.Now()
+			sg.AddHistory("edited", "Updated plan")
+			return nil
+		})
+		if err != nil {
 			return fmt.Errorf("updating saga: %w", err)
 		}
 
-		fmt.Printf("Updated plan for saga %s\n", sg.ID)
+		fmt.Printf("Updated plan for saga %s\n", updated.ID)
 		return nil
 	},
 }

@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +31,7 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(sagaID)
-		if err != nil {
+		if _, err := st.GetByID(sagaID); err != nil {
 			return sagaNotFound(sagaID)
 		}
 
@@ -39,31 +40,39 @@ Examples:
 			return fmt.Errorf("target saga not found: %s", targetID)
 		}
 
+		var apply func(*saga.Saga) error
 		switch action {
 		case "add":
-			if sg.HasRelationship(targetID) {
-				return fmt.Errorf("saga %s is already related to %s", sagaID, targetID)
+			apply = func(sg *saga.Saga) error {
+				if sg.HasRelationship(targetID) {
+					return fmt.Errorf("saga %s is already related to %s", sagaID, targetID)
+				}
+				sg.AddRelationship(targetID)
+				return nil
 			}
-
-			sg.AddRelationship(targetID)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
-			}
-			fmt.Printf("Added relationship: %s is now related to %s (%s)\n", sagaID, targetID, target.Title)
-
 		case "remove":
-			if !sg.HasRelationship(targetID) {
-				return fmt.Errorf("saga %s is not related to %s", sagaID, targetID)
+			apply = func(sg *saga.Saga) error {
+				if !sg.HasRelationship(targetID) {
+					return fmt.Errorf("saga %s is not related to %s", sagaID, targetID)
+				}
+				sg.RemoveRelationship(targetID)
+				return nil
 			}
-
-			sg.RemoveRelationship(targetID)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
-			}
-			fmt.Printf("Removed relationship: %s is no longer related to %s\n", sagaID, targetID)
-
 		default:
 			return fmt.Errorf("unknown action: %s (use 'add' or 'remove')", action)
+		}
+
+		if _, err := st.Mutate(sagaID, apply); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(sagaID)
+			}
+			return err
+		}
+
+		if action == "add" {
+			fmt.Printf("Added relationship: %s is now related to %s (%s)\n", sagaID, targetID, target.Title)
+		} else {
+			fmt.Printf("Removed relationship: %s is no longer related to %s\n", sagaID, targetID)
 		}
 
 		return nil

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sleeplesslord/saga/internal/saga"
@@ -43,15 +44,14 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(id)
-		if err != nil {
-			return sagaNotFound(id)
-		}
-
-		sg.SetPriority(priority)
-
-		if err := st.Update(sg); err != nil {
-			return fmt.Errorf("updating saga: %w", err)
+		if _, err := st.Mutate(id, func(sg *saga.Saga) error {
+			sg.SetPriority(priority)
+			return nil
+		}); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(id)
+			}
+			return err
 		}
 
 		fmt.Printf("Changed priority of saga %s to %s\n", id, priority)

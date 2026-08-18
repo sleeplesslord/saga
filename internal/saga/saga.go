@@ -47,6 +47,13 @@ type Saga struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	History   []HistoryEntry `json:"history"`
+
+	// Rev is bumped on every persisted change and used to detect a write built
+	// on a stale read: two processes that both loaded rev N cannot both store
+	// rev N+1, so the later one is rejected instead of silently discarding the
+	// earlier one's change. Records written before this field existed decode as
+	// 0, which is a valid starting revision.
+	Rev int `json:"rev,omitempty"`
 }
 
 // HistoryEntry tracks what happened and when
