@@ -3,6 +3,7 @@ package store
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -386,26 +387,6 @@ func (s *Store) Save(sg *saga.Saga, scope ...Scope) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// Check for duplicate ID across all scopes, retry with new ID if collision
-	existing, _ := s.loadAllUnlocked()
-	for attempt := 0; attempt < 3; attempt++ {
-		collision := false
-		for _, e := range existing {
-			if e.ID == sg.ID {
-				collision = true
-				break
-			}
-		}
-		if !collision {
-			break
-		}
-		if attempt < 2 {
-			sg.ID = saga.GenerateID()
-		} else {
-			return fmt.Errorf("duplicate saga ID after 3 attempts: %s", sg.ID)
-		}
-	}
-
 	// Determine scope
 	targetScope := ScopeGlobal
 	if s.HasLocal() && (len(scope) == 0 || scope[0] == ScopeLocal) {
@@ -428,36 +409,63 @@ func (s *Store) Save(sg *saga.Saga, scope ...Scope) error {
 		}
 	}
 
-	// Write plan to separate file, keep JSONL lean
-	sagaDir := filepath.Dir(path)
-	if sg.Plan != "" {
-		if err := writePlanFile(sagaDir, sg.ID, sg.Plan); err != nil {
-			return fmt.Errorf("writing plan file: %w", err)
+	// Locked so a concurrent Update (which rewrites the whole file) can't drop
+	// this append, and so two Saves can't interleave a partial line. The
+	// duplicate-ID check and the plan-file write are inside the lock too:
+	// checking outside it is the same read-then-write race this guards against,
+	// and the plan file is part of the record being created.
+	return withStoreLock(path, func(bool) error {
+		// Check for duplicate ID across all scopes, retry with new ID if collision
+		existing, _ := s.loadAllUnlocked()
+		for attempt := 0; attempt < 3; attempt++ {
+			collision := false
+			for _, e := range existing {
+				if e.ID == sg.ID {
+					collision = true
+					break
+				}
+			}
+			if !collision {
+				break
+			}
+			if attempt < 2 {
+				sg.ID = saga.GenerateID()
+			} else {
+				return fmt.Errorf("duplicate saga ID after 3 attempts: %s", sg.ID)
+			}
 		}
-	}
 
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("opening store: %w", err)
-	}
-	defer file.Close()
+		// Write plan to separate file, keep JSONL lean
+		sagaDir := filepath.Dir(path)
+		if sg.Plan != "" {
+			if err := writePlanFile(sagaDir, sg.ID, sg.Plan); err != nil {
+				return fmt.Errorf("writing plan file: %w", err)
+			}
+		}
 
-	// Marshal without plan — plan lives in .saga/plans/<id>.md
-	copy := *sg
-	copy.Plan = ""
-	data, err := json.Marshal(&copy)
-	if err != nil {
-		return fmt.Errorf("encoding saga: %w", err)
-	}
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return fmt.Errorf("opening store: %w", err)
+		}
+		defer file.Close()
 
-	if _, err := file.Write(data); err != nil {
-		return fmt.Errorf("writing saga: %w", err)
-	}
-	if _, err := file.WriteString("\n"); err != nil {
-		return fmt.Errorf("writing newline: %w", err)
-	}
+		// Marshal without plan — plan lives in .saga/plans/<id>.md
+		copy := *sg
+		copy.Plan = ""
+		data, err := json.Marshal(&copy)
+		if err != nil {
+			return fmt.Errorf("encoding saga: %w", err)
+		}
 
-	return nil
+		if _, err := file.Write(data); err != nil {
+			return fmt.Errorf("writing saga: %w", err)
+		}
+		if _, err := file.WriteString("\n"); err != nil {
+			return fmt.Errorf("writing newline: %w", err)
+		}
+
+		return nil
+	})
 }
 
 // InitLocal creates a local .saga directory in current working directory
@@ -480,6 +488,30 @@ func (s *Store) InitLocal() error {
 }
 
 // Update replaces an existing saga in storage (searches both scopes)
+// ErrNotFound reports that no saga with the requested ID exists in any scope.
+// Callers match on it with errors.Is to render their own message.
+var ErrNotFound = errors.New("saga not found")
+
+// ErrConflict reports that the record changed on disk after the caller read it,
+// so persisting the caller's copy would drop the other change.
+type ErrConflict struct {
+	ID       string
+	DiskRev  int
+	WriteRev int
+}
+
+func (e *ErrConflict) Error() string {
+	return fmt.Sprintf(
+		"saga %s was modified by another process (on disk rev %d, this change was built on rev %d); re-read and retry",
+		e.ID, e.DiskRev, e.WriteRev,
+	)
+}
+
+// Update persists a saga the caller already holds.
+//
+// Prefer Mutate: this cannot see a change committed between the caller's read
+// and this write, so it can only reject such a write (ErrConflict), not merge
+// with it.
 func (s *Store) Update(updated *saga.Saga) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -490,6 +522,7 @@ func (s *Store) Update(updated *saga.Saga) error {
 	}
 
 	// Try local first, then global
+	var deferred error
 	scopes := []Scope{ScopeLocal, ScopeGlobal}
 	for _, scope := range scopes {
 		path := s.localPath
@@ -500,30 +533,146 @@ func (s *Store) Update(updated *saga.Saga) error {
 			continue
 		}
 
-		sagas, err := s.loadFromPathUnlocked(path)
-		if err != nil {
-			return err
-		}
-
+		// found records that this scope holds the record, independent of whether
+		// writing it succeeded. Deciding that from the write outcome instead would
+		// send a rejected write on to the next scope — where it could be applied
+		// to a second copy of the same ID, and where a lock timeout would replace
+		// the real error message.
 		found := false
-		for i, sg := range sagas {
-			if sg.ID == updated.ID {
-				sagas[i] = updated
-				found = true
-				break
+		err := withStoreLock(path, func(locked bool) error {
+			// Re-read under the lock: whatever another process committed while we
+			// were deciding what to write is now visible.
+			sagas, err := s.loadFromPathUnlocked(path)
+			if err != nil {
+				return err
 			}
-		}
 
+			for i, sg := range sagas {
+				if sg.ID != updated.ID {
+					continue
+				}
+				found = true
+				if sg.Rev != updated.Rev {
+					return &ErrConflict{ID: updated.ID, DiskRev: sg.Rev, WriteRev: updated.Rev}
+				}
+				updated.Rev = sg.Rev + 1
+				sagas[i] = updated
+				return s.saveAllUnlocked(path, sagas)
+			}
+			return nil
+		})
 		if found {
-			// Update indexes
+			// This scope owns the record: its outcome is the answer, success or not.
+			if err != nil {
+				return err
+			}
 			if s.indexLoaded {
 				s.updateIndex(old, updated)
 			}
-			return s.saveAllUnlocked(path, sagas)
+			return nil
+		}
+		if err != nil {
+			// A lock or load failure on a scope that may not even hold the record
+			// must not stop the search — the saga could be in the next one. Keep
+			// the error in case no scope has it, so the caller sees the real reason
+			// instead of a misleading "not found".
+			deferred = err
 		}
 	}
 
-	return fmt.Errorf("saga not found: %s", updated.ID)
+	if deferred != nil {
+		return deferred
+	}
+	return fmt.Errorf("%w: %s", ErrNotFound, updated.ID)
+}
+
+// Mutate applies fn to the freshest copy of a saga and persists it, holding the
+// store lock for the whole cycle.
+//
+// Prefer this over GetByID+Update: it removes the window where another process
+// commits between the read and the write, so there is nothing to conflict with
+// and no retry to write.
+//
+// fn must not call back into the Store. It runs while the in-process mutex is
+// held and that mutex is not reentrant, so a nested Store call blocks forever —
+// this is a permanent deadlock, not something the lock timeout rescues. Read
+// anything fn needs before calling Mutate (see how `depend` keeps its
+// circular-dependency walk outside the callback).
+func (s *Store) Mutate(id string, fn func(*saga.Saga) error) (*saga.Saga, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var deferred error
+	scopes := []Scope{ScopeLocal, ScopeGlobal}
+	for _, scope := range scopes {
+		path := s.localPath
+		if scope == ScopeGlobal {
+			path = s.globalPath
+		}
+		if path == "" {
+			continue
+		}
+
+		// See Update: found must not be inferred from the write outcome, or a
+		// validation error from fn would be retried against the next scope.
+		found := false
+		var result *saga.Saga
+		err := withStoreLock(path, func(locked bool) error {
+			sagas, err := s.loadFromPathUnlocked(path)
+			if err != nil {
+				return err
+			}
+
+			for i, sg := range sagas {
+				if sg.ID != id {
+					continue
+				}
+				found = true
+				loadedRev := sg.Rev
+				if err := fn(sg); err != nil {
+					return err
+				}
+				// Without a lock another process can commit between the load above
+				// and the save below. Re-reading the revision is the only thing
+				// standing between that and a silently lost update.
+				if !locked {
+					current, err := s.loadFromPathUnlocked(path)
+					if err != nil {
+						return err
+					}
+					for _, fresh := range current {
+						if fresh.ID == id && fresh.Rev != loadedRev {
+							return &ErrConflict{ID: id, DiskRev: fresh.Rev, WriteRev: loadedRev}
+						}
+					}
+				}
+				sg.Rev = loadedRev + 1
+				sagas[i] = sg
+				result = sg
+				return s.saveAllUnlocked(path, sagas)
+			}
+			return nil
+		})
+		if found {
+			if err != nil {
+				return nil, err
+			}
+			// The in-memory index is now stale for this record; drop it so the
+			// next read reloads from disk.
+			s.indexLoaded = false
+			return result, nil
+		}
+		if err != nil {
+			// See Update: a failure on a scope that may not hold the record must
+			// not end the search, but it also must not be swallowed.
+			deferred = err
+		}
+	}
+
+	if deferred != nil {
+		return nil, deferred
+	}
+	return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
 }
 
 // loadFromPathUnlocked loads sagas without locking (caller must hold lock)
@@ -632,7 +781,7 @@ func (s *Store) GetByID(id string) (*saga.Saga, error) {
 		return sg, nil
 	}
 
-	return nil, fmt.Errorf("saga not found: %s", id)
+	return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
 }
 
 // GetChildren returns all direct children of a saga (uses index)
@@ -769,6 +918,21 @@ func (s *Store) Archive(scope Scope, cutoff time.Time, dryRun bool) (int, error)
 		return 0, nil
 	}
 
+	// The whole partition-and-rewrite runs under the store lock. Archiving both
+	// truncates the active file and appends to another one, so a concurrent
+	// mutation would otherwise be lost — or a saga could be archived and updated
+	// at once and end up in neither file.
+	var archived int
+	err := withStoreLock(path, func(bool) error {
+		count, err := s.archiveUnlocked(path, cutoff, dryRun)
+		archived = count
+		return err
+	})
+	return archived, err
+}
+
+// archiveUnlocked is Archive's body; the caller holds the store lock.
+func (s *Store) archiveUnlocked(path string, cutoff time.Time, dryRun bool) (int, error) {
 	sagas, err := s.loadFromPathUnlocked(path)
 	if err != nil {
 		return 0, fmt.Errorf("loading sagas: %w", err)

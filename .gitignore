@@ -1,5 +1,7 @@
-# Binary
+# Binary — anchored, or the pattern also matches the cmd/saga/ directory and
+# hides every file under it.
 /sg
+/saga
 
 # Go
 *.exe
@@ -17,4 +19,9 @@ vendor/
 *.swp
 *.swo
 sg_test
-saga
+
+# Runtime state beside any store the CLI writes to, including the repo-local
+# .saga used while developing. The lock file is created on every mutation; the
+# temp file is the atomic-rename staging file and only survives a crash.
+*.jsonl.lock
+saga-*.tmp

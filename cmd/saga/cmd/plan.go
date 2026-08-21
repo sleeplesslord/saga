@@ -2,27 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"strings"
-	"syscall"
 	"time"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
 
 var planFile string
-
-// isPipedStdin returns true when data is available on stdin
-// (piped input or heredoc), as opposed to an interactive terminal.
-func isPipedStdin() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&syscall.S_IFMT != syscall.S_IFCHR
-}
 
 var planCmd = &cobra.Command{
 	Use:   "plan <id> [plan-text]",
@@ -66,32 +55,49 @@ Examples:
 
 		// --clear: remove plan
 		if planClear {
-			sg.Plan = ""
-			sg.UpdatedAt = time.Now()
-			sg.AddHistory("edited", "Cleared plan")
-			if err := st.Update(sg); err != nil {
+			cleared, err := st.Mutate(id, func(sg *saga.Saga) error {
+				sg.Plan = ""
+				sg.UpdatedAt = time.Now()
+				sg.AddHistory("edited", "Cleared plan")
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("updating saga: %w", err)
 			}
-			fmt.Printf("Cleared plan for saga %s\n", sg.ID)
+			fmt.Printf("Cleared plan for saga %s\n", cleared.ID)
 			return nil
 		}
 
-		// Determine input source priority: --file > stdin > positional args
-		// Note: isPipedStdin() returns true for /dev/null redirects (e.g. Go's
-		// exec.Command with nil Stdin), so we read stdin eagerly and fall
-		// through to args if stdin is empty.
+		// Input source priority: --file > `-` (explicit stdin) > positional args
+		// > stdin.
+		//
+		// `saga plan <id> - < plan.md` is documented above, so `-` has to mean
+		// "read stdin" rather than being taken as one-character plan text. An
+		// unannounced stdin is only probed when no plan text was given, and that
+		// read is bounded (see readStdinIfReady) — view mode is the common case
+		// and it must not block on a stdin that never reaches EOF.
 		hasFile := planFile != ""
-		hasStdin := isPipedStdin()
-		hasArgs := len(args) >= 2
+		explicitStdin := len(args) >= 2 && args[1] == "-"
+		hasArgs := len(args) >= 2 && !explicitStdin
 
-		// Read stdin eagerly if available, but don't treat empty stdin as input
 		var stdinData string
-		if hasStdin {
-			data, err := io.ReadAll(os.Stdin)
+		switch {
+		case hasFile:
+		case explicitStdin:
+			data, err := readStdin()
 			if err != nil {
 				return fmt.Errorf("reading plan from stdin: %w", err)
 			}
-			stdinData = strings.TrimRight(string(data), "\n")
+			if data == "" {
+				return fmt.Errorf("stdin was empty")
+			}
+			stdinData = data
+		case !hasArgs:
+			data, err := readStdinIfReady()
+			if err != nil {
+				return fmt.Errorf("reading plan from stdin: %w", err)
+			}
+			stdinData = data
 		}
 
 		// No input at all: view mode
@@ -106,27 +112,30 @@ Examples:
 
 		// Set plan
 		var newPlan string
-		if hasFile {
+		switch {
+		case hasFile:
 			data, err := os.ReadFile(planFile)
 			if err != nil {
 				return fmt.Errorf("reading plan file: %w", err)
 			}
 			newPlan = string(data)
-		} else if stdinData != "" {
-			newPlan = stdinData
-		} else {
+		case hasArgs:
 			newPlan = strings.Join(args[1:], " ")
+		default:
+			newPlan = stdinData
 		}
 
-		sg.Plan = newPlan
-		sg.UpdatedAt = time.Now()
-		sg.AddHistory("edited", "Updated plan")
-
-		if err := st.Update(sg); err != nil {
+		updated, err := st.Mutate(id, func(sg *saga.Saga) error {
+			sg.Plan = newPlan
+			sg.UpdatedAt = time.Now()
+			sg.AddHistory("edited", "Updated plan")
+			return nil
+		})
+		if err != nil {
 			return fmt.Errorf("updating saga: %w", err)
 		}
 
-		fmt.Printf("Updated plan for saga %s\n", sg.ID)
+		fmt.Printf("Updated plan for saga %s\n", updated.ID)
 		return nil
 	},
 }

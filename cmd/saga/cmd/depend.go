@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -29,8 +31,7 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(sagaID)
-		if err != nil {
+		if _, err := st.GetByID(sagaID); err != nil {
 			return sagaNotFound(sagaID)
 		}
 
@@ -39,13 +40,13 @@ Examples:
 			return sagaNotFound(targetID)
 		}
 
+		// The circular-dependency check walks the whole graph, so it stays outside
+		// Mutate — fn runs with the store lock held and re-entering the store
+		// would deadlock. The per-record has/hasn't check moves inside, where it
+		// sees the record as stored.
+		var apply func(*saga.Saga) error
 		switch action {
 		case "add":
-			if sg.HasDependency(targetID) {
-				return fmt.Errorf("saga \"%s\" already depends on \"%s\"", sagaID, targetID)
-			}
-
-			// Check for circular dependency
 			circular, err := st.WouldCreateCircularDependency(sagaID, targetID)
 			if err != nil {
 				return fmt.Errorf("checking circular dependency: %w", err)
@@ -53,26 +54,36 @@ Examples:
 			if circular {
 				return circularDependency()
 			}
-
-			sg.AddDependency(targetID)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
+			apply = func(sg *saga.Saga) error {
+				if sg.HasDependency(targetID) {
+					return fmt.Errorf("saga \"%s\" already depends on \"%s\"", sagaID, targetID)
+				}
+				sg.AddDependency(targetID)
+				return nil
 			}
-			fmt.Printf("Added dependency: %s now depends on %s (%s)\n", sagaID, targetID, target.Title)
-
 		case "remove":
-			if !sg.HasDependency(targetID) {
-				return fmt.Errorf("saga %s does not depend on %s", sagaID, targetID)
+			apply = func(sg *saga.Saga) error {
+				if !sg.HasDependency(targetID) {
+					return fmt.Errorf("saga %s does not depend on %s", sagaID, targetID)
+				}
+				sg.RemoveDependency(targetID)
+				return nil
 			}
-
-			sg.RemoveDependency(targetID)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
-			}
-			fmt.Printf("Removed dependency: %s no longer depends on %s\n", sagaID, targetID)
-
 		default:
 			return fmt.Errorf("unknown action: %s (use 'add' or 'remove')", action)
+		}
+
+		if _, err := st.Mutate(sagaID, apply); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(sagaID)
+			}
+			return err
+		}
+
+		if action == "add" {
+			fmt.Printf("Added dependency: %s now depends on %s (%s)\n", sagaID, targetID, target.Title)
+		} else {
+			fmt.Printf("Removed dependency: %s no longer depends on %s\n", sagaID, targetID)
 		}
 
 		return nil

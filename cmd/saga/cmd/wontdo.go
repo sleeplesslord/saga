@@ -39,8 +39,9 @@ Examples:
 		}
 
 		for _, id := range ids {
-			sg, err := st.GetByID(id)
-			if err != nil {
+			// Checked up front so a typo reports as "not found" rather than
+			// falling through the child checks first.
+			if _, err := st.GetByID(id); err != nil {
 				return sagaNotFound(id)
 			}
 
@@ -60,27 +61,30 @@ Examples:
 					return fmt.Errorf("getting children: %w", err)
 				}
 				for _, child := range children {
-					if child.Status == saga.StatusActive || child.Status == saga.StatusPaused {
-						child.SetStatus(saga.StatusWontDo)
-						if wontdoReason != "" {
-							child.AddHistory("wontdo", wontdoReason)
-						}
-						if err := st.Update(child); err != nil {
-							return fmt.Errorf("updating child %s: %w", child.ID, err)
-						}
-						fmt.Printf("Marked sub-saga %s as wontdo\n", child.ID)
+					if child.Status != saga.StatusActive && child.Status != saga.StatusPaused {
+						continue
 					}
+					if _, err := st.Mutate(child.ID, func(fresh *saga.Saga) error {
+						fresh.SetStatus(saga.StatusWontDo)
+						if wontdoReason != "" {
+							fresh.AddHistory("wontdo", wontdoReason)
+						}
+						return nil
+					}); err != nil {
+						return fmt.Errorf("updating child %s: %w", child.ID, err)
+					}
+					fmt.Printf("Marked sub-saga %s as wontdo\n", child.ID)
 				}
 			}
 
-			sg.SetStatus(saga.StatusWontDo)
-
-			// Log reason if provided
-			if wontdoReason != "" {
-				sg.AddHistory("wontdo", wontdoReason)
-			}
-
-			if err := st.Update(sg); err != nil {
+			sg, err := st.Mutate(id, func(fresh *saga.Saga) error {
+				fresh.SetStatus(saga.StatusWontDo)
+				if wontdoReason != "" {
+					fresh.AddHistory("wontdo", wontdoReason)
+				}
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("updating saga: %w", err)
 			}
 

@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sleeplesslord/saga/internal/saga"
@@ -33,26 +34,23 @@ The saga will be set back to "active" status and added to history.`,
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(id)
+		sg, err := st.Mutate(id, func(sg *saga.Saga) error {
+			if sg.Status != saga.StatusDone {
+				return fmt.Errorf("saga %s is not done (current status: %s)", sg.ID, sg.Status)
+			}
+			sg.SetStatus(saga.StatusActive)
+			if reopenReason != "" {
+				sg.AddHistory("reopened", reopenReason)
+			} else {
+				sg.AddHistory("reopened", "Saga reopened")
+			}
+			return nil
+		})
 		if err != nil {
-			return sagaNotFound(id)
-		}
-
-		if sg.Status != saga.StatusDone {
-			return fmt.Errorf("saga %s is not done (current status: %s)", sg.ID, sg.Status)
-		}
-
-		sg.SetStatus(saga.StatusActive)
-
-		// Log reason if provided
-		if reopenReason != "" {
-			sg.AddHistory("reopened", reopenReason)
-		} else {
-			sg.AddHistory("reopened", "Saga reopened")
-		}
-
-		if err := st.Update(sg); err != nil {
-			return fmt.Errorf("updating saga: %w", err)
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(id)
+			}
+			return err
 		}
 
 		fmt.Printf("Reopened saga %s: %s\n", sg.ID, sg.Title)

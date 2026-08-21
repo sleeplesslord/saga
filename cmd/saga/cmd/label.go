@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
 	"github.com/spf13/cobra"
 )
@@ -27,34 +29,41 @@ Examples:
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
-		sg, err := st.GetByID(id)
-		if err != nil {
-			return sagaNotFound(id)
-		}
-
+		// The has/hasn't check runs inside Mutate so it is decided against the
+		// record as stored, not a copy read beforehand.
+		var apply func(*saga.Saga) error
 		switch action {
 		case "add":
-			if sg.HasLabel(label) {
-				return alreadyHasLabel(id, label)
+			apply = func(sg *saga.Saga) error {
+				if sg.HasLabel(label) {
+					return alreadyHasLabel(id, label)
+				}
+				sg.AddLabel(label)
+				return nil
 			}
-			sg.AddLabel(label)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
-			}
-			fmt.Printf("Added label '%s' to saga %s\n", label, id)
-
 		case "remove":
-			if !sg.HasLabel(label) {
-				return missingLabel(id, label)
+			apply = func(sg *saga.Saga) error {
+				if !sg.HasLabel(label) {
+					return missingLabel(id, label)
+				}
+				sg.RemoveLabel(label)
+				return nil
 			}
-			sg.RemoveLabel(label)
-			if err := st.Update(sg); err != nil {
-				return fmt.Errorf("updating saga: %w", err)
-			}
-			fmt.Printf("Removed label '%s' from saga %s\n", label, id)
-
 		default:
 			return fmt.Errorf("unknown action: %s (use 'add' or 'remove')", action)
+		}
+
+		if _, err := st.Mutate(id, apply); err != nil {
+			if errors.Is(err, store.ErrNotFound) {
+				return sagaNotFound(id)
+			}
+			return err
+		}
+
+		if action == "add" {
+			fmt.Printf("Added label '%s' to saga %s\n", label, id)
+		} else {
+			fmt.Printf("Removed label '%s' from saga %s\n", label, id)
 		}
 
 		return nil

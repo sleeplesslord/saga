@@ -85,10 +85,22 @@ Examples:
 
 		// --take: claim the first ready saga
 		if readyTake {
-			sg := ready[0]
+			candidate := ready[0]
 			claimAgent := fmt.Sprintf("%s@%d", agent, os.Getppid())
-			sg.ClaimWithDuration(claimAgent, claimDuration)
-			if err := st.Update(sg); err != nil {
+			// Claimed under the store lock against the record as stored, so a
+			// saga another session took between the scan above and now is not
+			// stolen. Two invocations sharing a parent process share claimAgent
+			// and so still both succeed — claim identity is per-session, not
+			// per-invocation.
+			sg, err := st.Mutate(candidate.ID, func(sg *saga.Saga) error {
+				if sg.IsClaimedWithDuration(claimDuration) && sg.ClaimedBy != claimAgent {
+					return fmt.Errorf("saga %s was just claimed by %s; re-run to take the next one",
+						sg.ID, sg.ClaimedBy)
+				}
+				sg.ClaimWithDuration(claimAgent, claimDuration)
+				return nil
+			})
+			if err != nil {
 				return fmt.Errorf("claiming saga: %w", err)
 			}
 			fmt.Printf("Claimed saga %s: %s\n", sg.ID, sg.Title)
