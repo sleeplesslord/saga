@@ -98,6 +98,22 @@ saga ready [--take]
 
 `--take` claims the top ready saga automatically.
 
+### `saga web`
+
+Open a local, read-only dashboard for visualizing status, hierarchy, claims, and hard dependencies.
+
+```bash
+saga web [--address 127.0.0.1:7331] [--no-open] [--global]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--address <host:port>` | Localhost listen address (default `127.0.0.1:7331`) |
+| `--no-open` | Start the server without opening a browser |
+| `--global` | Show the global store instead of the current project store |
+
+The server only accepts localhost bindings. Data refreshes automatically; task changes remain CLI-only.
+
 ## Modifying Sagas
 
 ### `saga edit`

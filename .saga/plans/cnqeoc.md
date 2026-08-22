@@ -1,0 +1,1 @@
+1. Add web view-model and API handlers. 2. Embed Signal Box HTML/CSS/JS. 3. Add saga web command, browser launch, and flags. 4. Test handlers and CLI integration. 5. Document and verify.

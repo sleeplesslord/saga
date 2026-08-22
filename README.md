@@ -32,6 +32,9 @@ saga new "Handle edge cases" --parent <id>
 # See what's ready to work on
 saga ready
 
+# Open the read-only project dashboard
+saga web
+
 # Claim and work
 saga ready --take              # Claim the top ready saga
 saga log <id> "Started implementation"
@@ -175,7 +178,7 @@ Quick overview:
 | Category | Commands |
 |----------|----------|
 | Create | `saga new`, `saga init` |
-| View | `saga list`, `saga status`, `saga context`, `saga search`, `saga ready` |
+| View | `saga list`, `saga status`, `saga context`, `saga search`, `saga ready`, `saga web` |
 | Modify | `saga edit`, `saga label`, `saga priority`, `saga log` |
 | Complete | `saga done`, `saga wontdo`, `saga reopen` |
 | Coordinate | `saga claim`, `saga unclaim`, `saga depend`, `saga relate` |

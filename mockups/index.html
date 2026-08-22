@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Visual direction mockups for Saga's local task dashboard">
+  <title>Saga web — direction studies</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!--
+  THESIS: Compare complete operational worlds, not isolated decoration; refuse the generic metric-card dashboard.
+  OWN-WORLD: Four intentionally distinct mockups share the same task truth and navigation frame.
+  STORY: Inspect each dashboard, compare dependency legibility, and choose a direction.
+  FIRST VIEWPORT: A compact comparison rail frames a full working dashboard mockup at useful scale.
+  FORM: Direction comparison study; seed 7b1dbf4b.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+  -->
+  <header class="gallery-header">
+    <a class="gallery-brand" href="#" aria-label="Saga direction studies home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 24V8h8l3 4 3-4h8v16h-8l-3-4-3 4H5Z"/></svg>
+      <span>Saga <b>web studies</b></span>
+    </a>
+    <p>Four read-only dashboard directions using the same illustrative project data.</p>
+    <div class="gallery-actions">
+      <span class="availability"><i></i> Preview server</span>
+      <button class="copy-link" type="button" id="copyLink">Copy link</button>
+    </div>
+  </header>
+
+  <nav class="direction-nav" aria-label="Visual directions">
+    <button class="direction-tab is-active" data-direction="signal" aria-pressed="true">
+      <span class="tab-number">A</span><span><b>Signal Box</b><small>Dispatch clarity</small></span>
+    </button>
+    <button class="direction-tab" data-direction="terminal" aria-pressed="false">
+      <span class="tab-number">B</span><span><b>Phosphor Terminal</b><small>Native to agents</small></span>
+    </button>
+    <button class="direction-tab" data-direction="onebit" aria-pressed="false">
+      <span class="tab-number">C</span><span><b>One-bit Desktop</b><small>Compact tools</small></span>
+    </button>
+    <button class="direction-tab" data-direction="miura" aria-pressed="false">
+      <span class="tab-number">D</span><span><b>Deployable Sheet</b><small>Dependency first</small></span>
+    </button>
+  </nav>
+
+  <main>
+    <section class="direction-note" aria-live="polite">
+      <div><strong id="directionTitle">Signal Box</strong><span id="directionLine">A railway interlocking board for coordinating work.</span></div>
+      <p id="directionRisk"><b>Watch for:</b> the route metaphor must stay subordinate to task names.</p>
+    </section>
+
+    <div class="mockup-frame">
+      <section class="mockup signal is-visible" data-mockup="signal" aria-label="Signal Box mockup">
+        <header class="signal-topbar">
+          <div class="signal-mark"><span>S</span><strong>SAGA</strong></div>
+          <div class="project-switch"><small>PROJECT CONTROL</small><b>sleeplesslord / saga</b></div>
+          <div class="signal-clock"><span>LOCAL</span><b id="signalTime">07:24:16</b></div>
+        </header>
+        <div class="signal-shell">
+          <aside class="signal-sidebar">
+            <nav aria-label="Dashboard sections">
+              <a class="selected" href="#signal-board"><svg viewBox="0 0 20 20"><path d="M3 4h14v12H3zM3 9h14M8 4v12"/></svg>Dispatch board</a>
+              <a href="#signal-list"><svg viewBox="0 0 20 20"><path d="M4 5h2M9 5h7M4 10h2M9 10h7M4 15h2M9 15h7"/></svg>All sagas <span>95</span></a>
+              <a href="#signal-ready"><svg viewBox="0 0 20 20"><path d="M4 10h9M10 6l4 4-4 4"/></svg>Ready <span>2</span></a>
+              <a href="#signal-paused"><svg viewBox="0 0 20 20"><path d="M6 4h3v12H6zM11 4h3v12h-3z"/></svg>Paused <span>0</span></a>
+              <a href="#signal-archive"><svg viewBox="0 0 20 20"><path d="M3 6h14v10H3zM2 3h16v3H2zM8 10h4"/></svg>Archive <span>91</span></a>
+            </nav>
+            <div class="signal-key">
+              <b>ROUTE KEY</b>
+              <span><i class="lamp ready"></i> Ready to move</span>
+              <span><i class="lamp blocked"></i> Blocked</span>
+              <span><i class="lamp active"></i> In progress</span>
+              <span><i class="lamp complete"></i> Complete</span>
+            </div>
+          </aside>
+          <div class="signal-main">
+            <header class="signal-pagehead">
+              <div><h1>Dispatch board</h1><p>See what can move, and what must clear first.</p></div>
+              <div class="signal-tools">
+                <label><svg viewBox="0 0 20 20"><circle cx="8" cy="8" r="5"/><path d="m12 12 5 5"/></svg><input aria-label="Search sagas" placeholder="Find a saga"></label>
+                <button type="button">Status: active <span>⌄</span></button>
+              </div>
+            </header>
+            <div class="signal-summary">
+              <div><span><i class="lamp ready"></i>READY</span><b>2</b><small>unblocked & unclaimed</small></div>
+              <div><span><i class="lamp blocked"></i>BLOCKED</span><b>2</b><small>waiting on other work</small></div>
+              <div><span><i class="lamp active"></i>CLAIMED</span><b>1</b><small>currently in progress</small></div>
+              <p>4 active of 95 total <span>Illustrative dependency preview</span></p>
+            </div>
+            <div class="signal-workspace">
+              <section class="route-panel" id="signal-board">
+                <div class="panel-heading"><div><h2>Dependency route</h2><p>Lines run from prerequisite to dependent work.</p></div><div class="zoom-controls"><button aria-label="Zoom out">−</button><span>100%</span><button aria-label="Zoom in">+</button></div></div>
+                <div class="route-map" id="routeMap">
+                  <svg class="route-lines" viewBox="0 0 820 420" preserveAspectRatio="none" aria-hidden="true">
+                    <path class="rail done" d="M72 85H217C255 85 252 198 292 198H360"/>
+                    <path class="rail waiting" d="M72 302H225C263 302 254 198 292 198H360"/>
+                    <path class="rail waiting" d="M555 198H622C652 198 650 302 682 302H760"/>
+                    <circle cx="292" cy="198" r="7"/><circle cx="650" cy="302" r="7"/>
+                  </svg>
+                  <article class="route-task done-task" style="--x:3%;--y:8%"><div class="route-status"><i></i><span>CLEARED</span></div><b>Complete store index</b><small>m9x3.1 · done</small></article>
+                  <article class="route-task active-task" style="--x:3%;--y:61%"><div class="route-status"><i></i><span>IN MOTION</span></div><b>Persist search index</b><small>4jgy · claimed by shard</small></article>
+                  <article class="route-task blocked-task selected" style="--x:43%;--y:34%"><div class="route-status"><i></i><span>BLOCKED</span></div><b>Release search upgrade</b><small>srch.4 · high priority</small></article>
+                  <article class="route-task ready-task" style="--x:78%;--y:61%"><div class="route-status"><i></i><span>READY</span></div><b>Run performance checks</b><small>perf.1 · unclaimed</small></article>
+                  <span class="route-label" style="--x:24%;--y:17%">satisfied</span><span class="route-label danger" style="--x:24%;--y:61%">waiting</span>
+                </div>
+              </section>
+              <aside class="task-inspector">
+                <div class="inspector-head"><span><i class="lamp blocked"></i>BLOCKED</span><button aria-label="Close inspector">×</button></div>
+                <code>srch.4</code><h2>Release search upgrade</h2><p>Prepare the indexed search improvements for release after persistence work is complete.</p>
+                <dl><div><dt>PRIORITY</dt><dd>High</dd></div><div><dt>UPDATED</dt><dd>18 min ago</dd></div><div><dt>CLAIM</dt><dd>Unclaimed</dd></div></dl>
+                <section><h3>Blocked by</h3><a href="#"><i class="lamp active"></i><span><b>4jgy</b> Persist search index<small>In progress · shard</small></span><em>→</em></a></section>
+                <section><h3>Unlocks</h3><a href="#"><i class="lamp ready"></i><span><b>perf.1</b> Run performance checks<small>Ready after this clears</small></span><em>→</em></a></section>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="mockup terminal" data-mockup="terminal" aria-label="Phosphor Terminal mockup">
+        <header class="terminal-bar"><span>SAGA // PROJECT SESSION</span><span>LOCAL STORE: ./.saga/sagas.jsonl</span><span class="terminal-live">● LIVE</span></header>
+        <div class="terminal-body">
+          <aside class="terminal-nav"><strong>SAGA/WEB</strong><p>READ-ONLY TASK CONSOLE</p><nav><a class="selected">[F1] OVERVIEW</a><a>[F2] READY <span>02</span></a><a>[F3] BLOCKED <span>02</span></a><a>[F4] CLAIMED <span>01</span></a><a>[F5] ARCHIVE <span>91</span></a></nav><div class="term-help">/ SEARCH<br>↑↓ SELECT<br>ENTER INSPECT<br>G TRACE GRAPH</div></aside>
+          <main class="terminal-main"><div class="terminal-title"><div><span>PROJECT</span><h1>sleeplesslord/saga</h1></div><p>95 SAGAS // 4 ACTIVE // UPDATED 18M AGO</p></div>
+            <div class="terminal-command"><span>saga@local:~$</span><strong> list --active --graph</strong><i></i></div>
+            <div class="terminal-grid"><section><header><span>ACTIVE QUEUE</span><span>4 RECORDS</span></header>
+              <div class="term-row dim"><code>m9x3.1</code><i>DONE</i><b>Complete store index</b><small>cleared</small></div>
+              <div class="term-row active"><code>4jgy</code><i>WORK</i><b>Persist search index</b><small>shard@8831</small></div>
+              <div class="term-row selected"><code>srch.4</code><i>WAIT</i><b>Release search upgrade</b><small>requires 4jgy</small></div>
+              <div class="term-row"><code>perf.1</code><i>RDY</i><b>Run performance checks</b><small>unclaimed</small></div>
+              <pre class="term-graph" aria-label="Dependency graph">m9x3.1 [✓] ──┐
+                ├──&gt; srch.4 [!] ──&gt; perf.1 [○]
+4jgy   [◆] ────┘
+
+✓ CLEARED  ◆ RUNNING  ! BLOCKED  ○ READY</pre></section>
+              <aside><header>RECORD // srch.4</header><span class="term-state">!! BLOCKED</span><h2>Release search upgrade</h2><p>Prepare the indexed search improvements for release after persistence work is complete.</p><hr><dl><dt>PRIORITY</dt><dd>HIGH</dd><dt>CLAIM</dt><dd>NONE</dd><dt>UPDATED</dt><dd>18M AGO</dd></dl><hr><b>WAITING ON</b><p class="term-link">→ 4jgy / Persist search index<br>&nbsp;&nbsp;state: RUNNING<br>&nbsp;&nbsp;claim: shard@8831</p><b>UNLOCKS</b><p class="term-link">→ perf.1 / Performance checks</p></aside>
+            </div>
+          </main>
+        </div>
+      </section>
+
+      <section class="mockup onebit" data-mockup="onebit" aria-label="One-bit Desktop mockup">
+        <header class="desktop-menubar"><div><span class="pixel-logo">S</span><b>File</b><b>View</b><b>Navigate</b><b>Window</b></div><div>Project: saga&nbsp;&nbsp; 07:24</div></header>
+        <div class="desktop-canvas">
+          <div class="desktop-icon"><span><i></i></span><b>Archive</b><small>91 items</small></div>
+          <section class="pixel-window task-window"><header><button>×</button><span></span><b>Active Sagas — 4 items</b><span></span><button>□</button></header><div class="window-toolbar"><button>All</button><button class="pressed">Active</button><button>Ready</button><label>Find: <input value=""></label></div><div class="pixel-list"><div class="list-head"><span>ID</span><span>Title</span><span>State</span></div><div><code>4jgy</code><b>Persist search index</b><span>Working</span></div><div class="selected"><code>srch.4</code><b>Release search upgrade</b><span>Blocked</span></div><div><code>perf.1</code><b>Run performance checks</b><span>Ready</span></div><div><code>63m2</code><b>E2E Runes tests</b><span>Ready</span></div></div><footer>4 items, 2 ready, 2 blocked</footer></section>
+          <section class="pixel-window graph-window"><header><button>×</button><span></span><b>Dependency Map</b><span></span><button>□</button></header><div class="pixel-graph"><svg viewBox="0 0 500 250"><defs><pattern id="dots" width="4" height="4" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".6"/></pattern></defs><path d="M125 57h55c24 0 18 68 43 68h54M125 191h55c24 0 18-66 43-66h54M377 125h45v66"/><rect x="24" y="31" width="102" height="53"/><rect x="24" y="164" width="102" height="53" fill="url(#dots)"/><rect x="277" y="97" width="101" height="55" class="invert"/><rect x="375" y="176" width="105" height="45"/><text x="40" y="55">m9x3.1</text><text x="40" y="70">COMPLETE</text><text x="40" y="188">4jgy</text><text x="40" y="203">WORKING</text><text x="292" y="121" class="white">srch.4</text><text x="292" y="137" class="white">BLOCKED</text><text x="390" y="202">perf.1 READY</text></svg></div></section>
+          <section class="pixel-window info-window"><header><button>×</button><span></span><b>Saga Info</b><span></span><button>□</button></header><div class="info-body"><h1>Release search upgrade</h1><p><b>ID:</b> srch.4 &nbsp; <mark>BLOCKED</mark></p><hr><p>Prepare the indexed search improvements for release after persistence work is complete.</p><fieldset><legend>Waiting on</legend><p>◆ <u>4jgy — Persist search index</u><br><small>Working · claimed by shard</small></p></fieldset><fieldset><legend>Unlocks</legend><p>○ <u>perf.1 — Run performance checks</u></p></fieldset><button class="default">Open in CLI…</button></div></section>
+        </div>
+      </section>
+
+      <section class="mockup miura" data-mockup="miura" aria-label="Deployable Sheet mockup">
+        <header class="miura-header"><div class="miura-brand"><svg viewBox="0 0 40 32"><path d="M1 25 10 7l10 18L30 7l9 18M10 7h20M20 25h19"/></svg><strong>SAGA / FIELD</strong></div><div class="miura-project">sleeplesslord / saga <span>read only</span></div><nav><a class="active">Field</a><a>Index</a><a>Archive</a></nav></header>
+        <main class="miura-main"><header><div><h1>Work unfolds from constraints.</h1><p>Open a task cell to see what holds it—and what it will release.</p></div><label><span>⌕</span><input placeholder="Search 95 sagas"></label></header>
+          <div class="miura-stats"><span><b>4</b> active cells</span><span><b>2</b> ready to unfold</span><span><b>2</b> held by constraints</span><small>Illustrative dependency preview</small></div>
+          <div class="fold-workspace"><section class="fold-field"><svg class="fold-lines" viewBox="0 0 900 480" preserveAspectRatio="none"><path d="M0 240 150 40l150 200L450 40l150 200L750 40l150 200M0 240l150 200 150-200 150 200 150-200 150 200 150-200M150 40v400M450 40v400M750 40v400"/></svg>
+            <article class="fold-card complete" style="--x:4%;--y:13%;--skew:-3deg"><span>✓ SEALED</span><code>m9x3.1</code><h2>Complete store index</h2><p>Constraint satisfied</p></article>
+            <article class="fold-card working" style="--x:12%;--y:61%;--skew:2deg"><span>◆ OPEN</span><code>4jgy</code><h2>Persist search index</h2><p>Claimed by shard</p></article>
+            <article class="fold-card held selected" style="--x:42%;--y:31%;--skew:-1deg"><span>× HELD</span><code>srch.4</code><h2>Release search upgrade</h2><p>1 constraint remains</p></article>
+            <article class="fold-card ready" style="--x:73%;--y:61%;--skew:2deg"><span>○ READY</span><code>perf.1</code><h2>Run performance checks</h2><p>Unclaimed</p></article>
+            <div class="constraint-tag" style="--x:31%;--y:54%">waiting on 4jgy →</div><div class="constraint-tag" style="--x:64%;--y:54%">unlocks perf.1 →</div>
+          </section>
+          <aside class="fold-inspector"><button>Close ×</button><span>HELD CELL</span><code>srch.4</code><h2>Release search upgrade</h2><p>Prepare the indexed search improvements for release after persistence work is complete.</p><dl><div><dt>Priority</dt><dd>High</dd></div><div><dt>Claim</dt><dd>None</dd></div><div><dt>Updated</dt><dd>18m</dd></div></dl><h3>Mountain constraint</h3><a>◆ <span><b>4jgy</b> Persist search index<small>open · shard</small></span></a><h3>Valley release</h3><a>○ <span><b>perf.1</b> Run performance checks<small>opens when this seals</small></span></a></aside>
+          </div>
+        </main>
+      </section>
+    </div>
+  </main>
+  <footer class="gallery-footer"><p><b>Comparison note:</b> Content is illustrative and exists to exercise dependencies, blocking, claims, and hierarchy. The final interface will read the real local Saga store.</p><span>Use <kbd>←</kbd> <kbd>→</kbd> to switch</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>

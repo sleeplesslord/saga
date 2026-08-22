@@ -1,0 +1,71 @@
+{
+  "title": "Choose Saga’s visual world",
+  "question": "The proposed direction makes dependencies the organizing structure. Keep it, choose an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Signal Box",
+      "kicker": "PROPOSED DIRECTION",
+      "lineage": "railway interlocking diagrams and dispatch boards",
+      "thesis": "Saga becomes a live dispatch surface where every task occupies a block and every dependency controls the signal ahead.",
+      "palette": ["#F4F1E8", "#20221F", "#B6382F", "#27705E", "#D69C2F"],
+      "materials": ["painted enamel", "engraved labels", "paper train orders"],
+      "viewport": "A compact ledger sits beside a wide dependency route: status signals, junctions, and task blocks reveal what can move next.",
+      "risk": "The route metaphor must remain subordinate to task names and familiar filtering controls.",
+      "sketch": ".impeccable/sketches/signal-box.webp"
+    },
+    {
+      "id": "challenger-terminal",
+      "label": "Phosphor Terminal",
+      "kicker": "ALTERNATE",
+      "lineage": "green-phosphor terminals in a midnight machine room",
+      "thesis": "The dashboard reads as one searchable machine transcript with task state printed directly into the flow.",
+      "case": "Strong developer recognition, but weaker spatial clarity for hierarchy and converging dependencies.",
+      "palette": ["#050806", "#78F095", "#285B36", "#D8FFE1"],
+      "materials": ["curved glass", "phosphor bloom", "fixed-column text"],
+      "viewport": "An 80-column task index and selected-task transcript fill the screen with no detached chrome.",
+      "risk": "Long sessions and graph tracing suffer if terminal theater overpowers information density.",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-phosphor-terminal-midnight-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-phosphor-terminal-midnight.webp"
+    },
+    {
+      "id": "challenger-onebit",
+      "label": "One-bit Desktop",
+      "kicker": "ALTERNATE",
+      "lineage": "early one-bit desktop interfaces",
+      "thesis": "Hierarchy, graph, and detail appear as crisp overlapping tools on a black-and-white project desktop.",
+      "case": "Excellent operational clarity and compact controls, though nostalgia may distract from Saga’s current workflow.",
+      "palette": ["#FFFFFF", "#000000", "#B8B8B8", "#5F5F5F"],
+      "materials": ["one-bit pixels", "ordered dithers", "one-pixel rules"],
+      "viewport": "A task window, dependency-map window, and inspector tile into a dense monochrome workspace.",
+      "risk": "Pixel grammar can become costume unless every interaction behaves consistently.",
+      "hero": "https://impeccable.style/worlds/cards/medium-native-one-bit-desktop-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/medium-native-one-bit-desktop.webp"
+    },
+    {
+      "id": "challenger-miura",
+      "label": "Deployable Sheet",
+      "kicker": "ALTERNATE",
+      "lineage": "Miura-fold constraint diagrams",
+      "thesis": "Task groups unfold from compact packets into a linked crease field where one state change propagates visibly.",
+      "case": "Dependency propagation is memorable, but the unfamiliar folding model increases interpretation cost.",
+      "palette": ["#FAFAF7", "#171816", "#C7A13A", "#A9C8D4"],
+      "materials": ["scored paper", "gold foil", "technical notation"],
+      "viewport": "Summary packets open into a diagonal task field while the complete dependency graph remains inspectable.",
+      "risk": "Diagonal geometry could compromise title scanning and responsive layout.",
+      "hero": "https://impeccable.style/worlds/cards/paper-folds-pleats-deployable-miura-orbit-sheet-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/paper-folds-pleats-deployable-miura-orbit-sheet.webp"
+    }
+  ],
+  "reroll": true,
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A polished neutral task dashboard with summary cards, filters, a board, and a conventional node graph.",
+    "palette": ["#F7F8FA", "#1F2937", "#2563EB", "#D1D5DB"],
+    "materials": ["flat panels", "soft borders", "standard status badges"],
+    "viewport": "Metrics lead into a familiar task table with the dependency graph in a secondary tab.",
+    "risk": "Easy to learn, but it makes Saga look interchangeable with generic project software."
+  },
+  "steer": true
+}
