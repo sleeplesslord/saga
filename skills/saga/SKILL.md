@@ -54,11 +54,11 @@ saga new "title" --deadline 20250415  # Set deadline (YYYYMMDD)
 saga done <id> [<id> ...]           # Mark complete (multiple IDs)
 saga done <id> --cascade             # Mark all active sub-sagas done first
 saga done <id> --reason "why"        # Log reason in history
-saga done <id> --quiet               # Suppress runes hint
+saga done <id> --quiet               # Suppress non-essential output
 saga done <id> --force               # Force completion despite blockers
 saga wontdo <id> [--id ...] --reason "why"  # Abandon/reject/obsolete
 saga wontdo <id> --cascade           # Mark all active sub-sagas as wontdo
-saga wontdo <id> --quiet             # Suppress runes hint
+saga wontdo <id> --quiet             # Suppress non-essential output
 
 # Reopen
 saga reopen <id>                     # Reopen a done saga (sets back to active)
@@ -199,7 +199,7 @@ For sagas that are abandoned, rejected, or obsoleted (not "completed"):
 ```bash
 saga wontdo <id> --reason "Requirements changed"
 saga wontdo <id> --cascade            # Also marks active sub-sagas as wontdo
-saga wontdo <id> --quiet               # Suppress runes hint
+saga wontdo <id> --quiet               # Suppress non-essential output
 ```
 
 Wontdo is a terminal state (like done) but semantically distinct. It is non-blocking in dependency checks (shown as ⊘ wontdo).

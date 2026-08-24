@@ -126,14 +126,14 @@ saga done abc123                          # Mark done (checks children/deps)
 saga done abc123 def456                   # Mark multiple done
 saga done abc123 --cascade               # Mark all active sub-sagas as done first
 saga done abc123 --reason "Verified"     # Log reason in history
-saga done abc123 --quiet                 # Suppress runes hint (auto-suppressed in non-TTY)
+saga done abc123 --quiet                 # Suppress non-essential output
 saga done abc123 --force                 # Force completion despite blockers
 ```
 
 **Flags:**
 - `--cascade` - Mark all active sub-sagas as done before completing parent
 - `--reason "text"` - Log reason in history
-- `--quiet` - Suppress runes hint (auto-suppressed in non-TTY environments)
+- `--quiet` - Suppress non-essential output
 - `--force` - Force completion even with active children or incomplete dependencies
 
 **Blocks if (without --force):**
@@ -148,13 +148,13 @@ Mark saga(s) as abandoned/rejected/obsoleted. Distinct terminal state from "done
 saga wontdo abc123 --reason "Requirements changed"
 saga wontdo abc123 def456               # Mark multiple as wontdo
 saga wontdo abc123 --cascade            # Mark all active sub-sagas as wontdo
-saga wontdo abc123 --quiet              # Suppress runes hint
+saga wontdo abc123 --quiet              # Suppress non-essential output
 ```
 
 **Flags:**
 - `--reason "text"` - Log reason in history (recommended)
 - `--cascade` - Mark all active sub-sagas as wontdo first
-- `--quiet` - Suppress runes hint (auto-suppressed in non-TTY environments)
+- `--quiet` - Suppress non-essential output
 
 **Key behaviors:**
 - Terminal state (like done)

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os/exec"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -23,7 +22,6 @@ var doneCmd = &cobra.Command{
 	Long: `Mark a saga as done. By default, cannot mark a saga as done if it has active sub-sagas.
 Use --force to override this check.
 Use --cascade to also mark all active sub-sagas as done.
-Use --quiet to suppress hints (also auto-suppressed when not a TTY).
 Use --reason to log why the saga was closed.
 
 Multiple IDs can be provided to mark several sagas as done at once.
@@ -105,24 +103,10 @@ Examples:
 			}
 
 			fmt.Printf("Marked saga %s as done\n", sg.ID)
-
-			// Hint about runes if installed (only in TTY, suppressible with --quiet)
-			if !doneQuiet && isTerminal() && isRunesInstalled() {
-				fmt.Println()
-				fmt.Println("💡 This saga involved problem-solving. Capture the knowledge?")
-				fmt.Println("   runes add \"<title>\" --problem \"...\" --solution \"...\" --saga " + sg.ID)
-				fmt.Println("   runes edit <id> --learned \"<insight>\"")
-			}
 		}
 
 		return nil
 	},
-}
-
-// isRunesInstalled checks if runes CLI is available on PATH
-func isRunesInstalled() bool {
-	_, err := exec.LookPath("runes")
-	return err == nil
 }
 
 func init() {

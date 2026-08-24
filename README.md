@@ -7,7 +7,6 @@ Task management for agent workflows. Track work, capture knowledge, coordinate b
 Most task trackers are built for human teams. Saga is built for **human-agent collaboration**:
 
 - **Sagas track tasks** — what needs to be done, by whom, in what order
-- **Runes capture knowledge** — solutions, patterns, lessons learned ([separate project](https://github.com/sleeplesslord/runes))
 - **Hierarchical structure** — parent/child relationships mirror real work breakdown
 - **Claim system** — agents coordinate without stepping on each other
 - **Context command** — agents understand the full picture before acting
@@ -146,7 +145,6 @@ Saga shines when agents use it systematically:
 
 1. **Find work**: `saga ready` — see what's unblocked and unclaimed
 2. **Read context**: `saga context <id>` — understand hierarchy, dependencies, claims
-3. **Check knowledge** *(optional)*: `runes search "problem"` — has this been solved before?
 
 ### During Work
 
@@ -158,7 +156,6 @@ Saga shines when agents use it systematically:
 
 1. **Mark done**: `saga done <id>` — complete the saga
 2. **Or abandon**: `saga wontdo <id> --reason "why"` — for rejected/obsoleted work
-3. **Capture knowledge** *(optional)*: `runes add "Solution" --saga <id>`
 
 ### Reopening Work
 
@@ -189,22 +186,6 @@ Quick overview:
 Run `saga <command> --help` for detailed usage of any command.
 
 Common aliases (LLM-friendly): `add`/`create`→`new`, `show`→`context`, `update`→`edit`, `complete`/`finish`→`done`, `cancel`/`skip`→`wontdo`, `assign`→`claim`, `unassign`/`release`→`unclaim`, `ls`→`list`, `todo`→`ready`, `resume`→`continue`, `comment`→`log`.
-
-## Integration with Runes
-
-[Runes](https://github.com/sleeplesslord/runes) is a separate knowledge management tool that integrates with Saga:
-
-```bash
-# In saga: see linked knowledge
-saga context <id>
-# KNOWLEDGE (Runes)
-#   • xr5h - Fixed auth timeout [auth-timeout-retry]
-
-# In runes: link to saga
-runes add "Auth fix" --saga <id>
-```
-
-Pattern: Saga tracks *doing*, Runes tracks *knowing*. When `saga done` detects runes is installed, it suggests capturing knowledge.
 
 ## Architecture
 
@@ -246,7 +227,6 @@ Dependencies:
 ## See Also
 
 - [Command Reference](docs/command-reference.md) — Full command docs with flags and examples
-- [Runes](https://github.com/sleeplesslord/runes) — Knowledge management
 - [Agent Skill](skills/saga/) — Teach agents to use Saga
 
 ## License

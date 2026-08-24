@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -23,7 +22,6 @@ Use for sagas that were abandoned, rejected, or obsoleted.
 Reason is optional but recommended for later retrospection.
 
 Use --cascade to also mark all active sub-sagas as wontdo.
-Use --quiet to suppress the runes hint (also auto-suppressed when not a TTY).
 
 Examples:
   sg wontdo abc123
@@ -89,27 +87,10 @@ Examples:
 			}
 
 			fmt.Printf("Marked saga %s as wontdo\n", sg.ID)
-
-			// Hint about runes if installed (only in TTY, suppressible with --quiet)
-			if !wontdoQuiet && isTerminal() && isRunesInstalled() {
-				fmt.Println()
-				fmt.Println("💡 This saga involved problem-solving. Capture the knowledge?")
-				fmt.Println("   runes add \"<title>\" --problem \"...\" --solution \"...\" --saga " + sg.ID)
-				fmt.Println("   runes edit <id> --learned \"<insight>\"")
-			}
 		}
 
 		return nil
 	},
-}
-
-// isTerminal returns true if stdout is a terminal
-func isTerminal() bool {
-	fi, err := os.Stdout.Stat()
-	if err != nil {
-		return false
-	}
-	return (fi.Mode() & os.ModeCharDevice) != 0
 }
 
 func init() {

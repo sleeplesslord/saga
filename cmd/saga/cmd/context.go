@@ -3,8 +3,6 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
-	"strings"
 
 	"github.com/sleeplesslord/saga/internal/saga"
 	"github.com/sleeplesslord/saga/internal/store"
@@ -100,29 +98,6 @@ Examples:
 			}
 		}
 
-		// Get linked runes (knowledge) via runes CLI
-		// Run from current directory so runes can find local .runes/
-		runesCmd := exec.Command("runes", "search", "--json", "--saga", sg.ID)
-		runesCmd.Dir = "." // Explicitly use current directory
-		output, err := runesCmd.Output()
-		if err == nil && len(output) > 0 {
-			// Try parsing as saga-linked runes format: {"runes": [...]}
-			var sagaResult struct {
-				Runes []struct {
-					ID    string `json:"id"`
-					Title string `json:"title"`
-				} `json:"runes"`
-			}
-			if err := json.Unmarshal(output, &sagaResult); err == nil && len(sagaResult.Runes) > 0 {
-				for _, r := range sagaResult.Runes {
-					ctx.Runes = append(ctx.Runes, BriefRune{
-						ID:    r.ID,
-						Title: r.Title,
-					})
-				}
-			}
-		}
-
 		// Output
 		if contextFormat == "json" {
 			data, err := json.MarshalIndent(ctx, "", "  ")
@@ -145,7 +120,6 @@ type SagaContext struct {
 	Children     []BriefSaga      `json:"children,omitempty"`
 	Dependencies []DependencyInfo `json:"dependencies,omitempty"`
 	Related      []BriefSaga      `json:"related,omitempty"`
-	Runes        []BriefRune      `json:"runes,omitempty"`
 }
 
 // BriefSaga minimal saga info
@@ -153,13 +127,6 @@ type BriefSaga struct {
 	ID     string      `json:"id"`
 	Title  string      `json:"title"`
 	Status saga.Status `json:"status"`
-}
-
-// BriefRune minimal rune info
-type BriefRune struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Pattern string `json:"pattern,omitempty"`
 }
 
 // DependencyInfo includes blocking status
@@ -237,37 +204,6 @@ func printContext(ctx *SagaContext) {
 		fmt.Println()
 	}
 
-	// Runes (knowledge)
-	if len(ctx.Runes) > 0 {
-		fmt.Println(repeat("─", 40))
-		fmt.Println("KNOWLEDGE (Runes)")
-		fmt.Println(repeat("─", 40))
-		for _, r := range ctx.Runes {
-			pattern := ""
-			if r.Pattern != "" {
-				pattern = fmt.Sprintf(" [%s]", r.Pattern)
-			}
-			fmt.Printf("  • %s - %s%s\n", r.ID, r.Title, pattern)
-		}
-		fmt.Println()
-	}
-
-	// Suggested runes (based on saga content)
-	suggested := suggestRunes(sg)
-	if len(suggested) > 0 {
-		fmt.Println(repeat("─", 40))
-		fmt.Println("💡 SUGGESTED RUNES")
-		fmt.Println(repeat("─", 40))
-		fmt.Println("Based on this saga's content, these runes may be relevant:")
-		for _, r := range suggested {
-			fmt.Printf("  • %s - %s\n", r.ID, r.Title)
-		}
-		fmt.Println()
-		fmt.Println("Search runes: runes search \"<keywords>\"")
-		fmt.Println("Show details:  runes show <id>")
-		fmt.Println()
-	}
-
 	// History
 	fmt.Println(repeat("─", 40))
 	fmt.Println("RECENT HISTORY")
@@ -301,99 +237,6 @@ func canComplete(ctx *SagaContext) bool {
 		}
 	}
 	return true
-}
-
-// suggestRunes searches runes based on saga title/description keywords
-func suggestRunes(sg *saga.Saga) []BriefRune {
-	// Extract keywords from title and description
-	keywords := extractKeywords(sg.Title + " " + sg.Description)
-	if len(keywords) == 0 {
-		return nil
-	}
-
-	// Filter out short keywords and build search args
-	var searchArgs []string
-	for _, kw := range keywords {
-		if len(kw) >= 3 {
-			searchArgs = append(searchArgs, kw)
-		}
-	}
-	if len(searchArgs) == 0 {
-		return nil
-	}
-
-	// Batch search: runes search --json "kw1" "kw2" "kw3" ...
-	args := append([]string{"search", "--json"}, searchArgs...)
-	runesCmd := exec.Command("runes", args...)
-	output, err := runesCmd.Output()
-	if err != nil || len(output) == 0 {
-		return nil
-	}
-
-	// Parse JSON output
-	var result struct {
-		Queries []struct {
-			Query   string `json:"query"`
-			Results []struct {
-				ID    string `json:"id"`
-				Title string `json:"title"`
-			} `json:"results"`
-		} `json:"queries"`
-	}
-	if err := json.Unmarshal(output, &result); err != nil {
-		return nil
-	}
-
-	// Collect unique results across all queries
-	var suggested []BriefRune
-	seen := make(map[string]bool)
-	for _, q := range result.Queries {
-		for _, r := range q.Results {
-			if !seen[r.ID] {
-				seen[r.ID] = true
-				suggested = append(suggested, BriefRune{
-					ID:    r.ID,
-					Title: r.Title,
-				})
-				if len(suggested) >= 5 {
-					return suggested // Max 5 suggestions
-				}
-			}
-		}
-	}
-
-	return suggested
-}
-
-// extractKeywords extracts meaningful keywords from text
-func extractKeywords(text string) []string {
-	// Simple keyword extraction - split and filter
-	words := strings.Fields(strings.ToLower(text))
-	var keywords []string
-	stopWords := map[string]bool{
-		"the": true, "a": true, "an": true, "and": true, "or": true,
-		"in": true, "on": true, "at": true, "to": true, "for": true,
-		"of": true, "with": true, "by": true, "is": true, "are": true,
-		"was": true, "be": true, "been": true, "have": true, "has": true,
-		"had": true, "do": true, "does": true, "did": true, "will": true,
-		"would": true, "should": true, "could": true, "can": true,
-		"add": true, "create": true, "fix": true, "implement": true,
-		"update": true, "make": true, "use": true, "using": true,
-	}
-
-	seen := make(map[string]bool)
-	for _, w := range words {
-		// Remove punctuation
-		w = strings.TrimFunc(w, func(r rune) bool {
-			return r < 'a' || r > 'z'
-		})
-		if len(w) >= 3 && !stopWords[w] && !seen[w] {
-			keywords = append(keywords, w)
-			seen[w] = true
-		}
-	}
-
-	return keywords
 }
 
 func init() {

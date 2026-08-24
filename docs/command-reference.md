@@ -62,7 +62,7 @@ saga status <id>
 
 ### `saga context`
 
-Show full context: hierarchy, dependencies, claims, linked runes, and history.
+Show full context: hierarchy, dependencies, claims, and history.
 
 ```bash
 saga context <id> [--format json]
