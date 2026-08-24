@@ -4,28 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Read-only visualization of local Saga tasks and dependencies">
-  <title>Saga — Dispatch board</title>
+  <title>Saga — Board</title>
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
 <!--
-THESIS: The dependency route is the dashboard; refuse generic metric cards and detached graph tabs.
-OWN-WORLD: Warm dispatch paper, dark painted control surfaces, engraved labels, and restrained railway signal colors.
-STORY: See what can move, trace what blocks it, inspect the task, then return to the CLI to act.
+THESIS: The raven's report — a read-only board that surveys the project and returns the state of every saga. The board carries Thought (what is happening now); the inspector carries Memory (what has happened).
+OWN-WORLD: Ink-dark basalt and runestone surfaces, gilded carved seals, runic signal marks, and restrained ember-moss-gold signal colors on a blue-tinted night ground.
+STORY: See what can move, trace what blocks it, inspect the saga, then return to the CLI to act.
 FIRST VIEWPORT: Navigation and readiness totals frame a wide task ledger whose connectors expose dependency flow; detail opens alongside it.
-FORM: Signal Box, selected direction; seed 7b1dbf4b.
+FORM: Ravens — Thought & Memory, selected direction; seed 81c84d2e.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
 -->
 <div id="app" class="app" data-inspector="closed">
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Saga dispatch board"><span>S</span><strong>SAGA</strong></a>
+    <a class="brand" href="/" aria-label="Saga board"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4 L20 12 L4 20" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></svg></span><strong>SAGA</strong></a>
     <button class="project" id="projectButton" type="button"><small>PROJECT CONTROL</small><b id="projectName">Loading…</b></button>
     <div class="sync"><i></i><span>LOCAL</span><b id="clock">--:--:--</b></div>
   </header>
   <div class="shell">
     <aside class="sidebar">
       <nav aria-label="Dashboard sections">
-        <button class="nav-item selected" data-view="active" type="button"><svg viewBox="0 0 20 20"><path d="M3 4h14v12H3zM3 9h14M8 4v12"/></svg><span>Dispatch board</span></button>
+        <button class="nav-item selected" data-view="active" type="button"><svg viewBox="0 0 20 20"><path d="M3 4h14v12H3zM3 9h14M8 4v12"/></svg><span>Saga board</span></button>
         <button class="nav-item" data-view="all" type="button"><svg viewBox="0 0 20 20"><path d="M4 5h2M9 5h7M4 10h2M9 10h7M4 15h2M9 15h7"/></svg><span>All sagas</span><em id="countAll">0</em></button>
         <button class="nav-item" data-view="ready" type="button"><svg viewBox="0 0 20 20"><path d="M4 10h9M10 6l4 4-4 4"/></svg><span>Ready</span><em id="countReadyNav">0</em></button>
         <button class="nav-item" data-view="blocked" type="button"><svg viewBox="0 0 20 20"><path d="M10 3v9M10 16v1M3 10a7 7 0 1 0 14 0 7 7 0 1 0-14 0"/></svg><span>Blocked</span><em id="countBlockedNav">0</em></button>
@@ -33,17 +33,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         <button class="nav-item" data-view="archive" type="button"><svg viewBox="0 0 20 20"><path d="M3 6h14v10H3zM2 3h16v3H2zM8 10h4"/></svg><span>Archive</span><em id="countArchive">0</em></button>
       </nav>
       <div class="key">
-        <b>ROUTE KEY</b>
+        <b>RUNE KEY</b>
         <span><i class="lamp ready"></i>Ready to move</span>
         <span><i class="lamp blocked"></i>Blocked</span>
         <span><i class="lamp claimed"></i>Claimed</span>
         <span><i class="lamp complete"></i>Complete</span>
       </div>
-      <p class="readonly"><svg viewBox="0 0 20 20"><path d="M6 9V6a4 4 0 0 1 8 0v3M4 9h12v8H4z"/></svg><span><b>Read-only control</b>Use the CLI to change work.</span></p>
+      <p class="readonly"><svg viewBox="0 0 20 20"><path d="M6 9V6a4 4 0 0 1 8 0v3M4 9h12v8H4z"/></svg><span><b>Read-only watch</b>Use the CLI to change work.</span></p>
     </aside>
     <main class="main">
       <header class="pagehead">
-        <div><h1 id="viewTitle">Dispatch board</h1><p id="viewDescription">See what can move, and what must clear first.</p></div>
+        <div><h1 id="viewTitle">Saga board</h1><p id="viewDescription">See what can move, and what must be cleared first.</p></div>
         <div class="tools">
           <label class="search"><svg viewBox="0 0 20 20"><circle cx="8" cy="8" r="5"/><path d="m12 12 5 5"/></svg><input id="searchInput" type="search" placeholder="Find a saga" autocomplete="off"><kbd>/</kbd></label>
           <label class="select"><span>Status</span><select id="statusFilter"><option value="">Any status</option><option>active</option><option>paused</option><option>done</option><option>wontdo</option></select></label>
@@ -58,14 +58,14 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </section>
       <div class="workspace">
         <section class="board">
-          <header class="boardhead"><div><h2 id="boardTitle">Active routes</h2><p>Prerequisites appear before the work they unlock.</p></div><div class="board-actions"><button id="expandAll" type="button">Expand hierarchy</button><span id="resultCount">0 sagas</span></div></header>
-          <div class="column-head" aria-hidden="true"><span>SIGNAL</span><span>SAGA</span><span>DEPENDENCIES</span><span>UPDATED</span></div>
+          <header class="boardhead"><div><h2 id="boardTitle">Active sagas</h2><p>Prerequisites appear before the work they unlock.</p></div><div class="board-actions"><button id="expandAll" type="button">Expand hierarchy</button><span id="resultCount">0 sagas</span></div></header>
+          <div class="column-head" aria-hidden="true"><span>MARK</span><span>SAGA</span><span>DEPENDENCIES</span><span>UPDATED</span></div>
           <div id="taskList" class="task-list" aria-live="polite"></div>
-          <div id="emptyState" class="empty" hidden><span class="empty-signal"><i></i><i></i><i></i></span><h2>No routes match</h2><p>Clear the search or choose another section to inspect local work.</p><button type="button" id="clearFilters">Clear filters</button></div>
+          <div id="emptyState" class="empty" hidden><span class="empty-signal"><i></i><i></i><i></i></span><h2>No sagas match</h2><p>Clear the search or choose another section to inspect local work.</p><button type="button" id="clearFilters">Clear filters</button></div>
         </section>
         <aside class="inspector" id="inspector" aria-label="Saga details">
           <header><span id="inspectorState"><i class="lamp complete"></i>SELECT A SAGA</span><div class="inspector-actions"><button id="expandInspector" type="button" aria-label="View saga fullscreen" aria-pressed="false" title="View saga fullscreen"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8V3h5M12 3h5v5M17 12v5h-5M8 17H3v-5"/></svg></button><button id="closeInspector" type="button" aria-label="Close details" title="Close details">×</button></div></header>
-          <div id="inspectorBody" class="inspector-body" tabindex="-1"><div class="inspector-empty"><svg viewBox="0 0 80 80"><path d="M9 40h21l10-18 10 36 10-18h11"/><circle cx="9" cy="40" r="4"/><circle cx="71" cy="40" r="4"/></svg><h2>Inspect a route</h2><p>Select any saga to trace its dependencies, children, and recent history.</p></div></div>
+          <div id="inspectorBody" class="inspector-body" tabindex="-1"><div class="inspector-empty"><svg viewBox="0 0 80 80"><path d="M9 40h21l10-18 10 36 10-18h11"/><circle cx="9" cy="40" r="4"/><circle cx="71" cy="40" r="4"/></svg><h2>Inspect a saga</h2><p>Select any saga to trace its dependencies, children, and recent history.</p></div></div>
         </aside>
       </div>
     </main>

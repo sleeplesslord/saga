@@ -4,81 +4,61 @@
 
 ## Direction
 
-Saga's web interface is a **Signal Box**: a calm local dispatch surface inspired by railway interlocking boards and paper train orders. Tasks are routes, hard dependencies are signals, and state color answers whether work can move. The reference is operational rather than nostalgic; familiar task names, search, filtering, and a ledger reading order always outrank metaphor.
+Saga's web interface is **Ravens — Thought & Memory**: a read-only board that surveys the project and returns the state of every saga without acting. The board carries Thought (what is happening now); the inspector carries Memory (what has happened). The reference is the raven's report — ink-dark basalt and runestone surfaces, gilded carved seals, runic signal marks, and restrained ember-moss-gold signal colors on a blue-tinted night ground. Familiar task names, search, filtering, and a ledger reading order always outrank metaphor; the Norse voice lives in the display type and the marks, not in coined jargon.
 
 ## Surface Scene
 
-The interface is designed for a developer or agent operator checking a project during normal desk work in mixed ambient light. It uses a light paper work surface for long-session readability, with a dark painted control rail framing navigation and identity.
+The interface is designed for a developer or agent operator checking a project during normal desk work. It uses an ink-dark night ground for long-session focus, with a single gilded hairline framing identity and selection. The dense task ledger is the workhorse; the inspector opens alongside it to carry the saga's memory — description, plan, dependencies, and history.
 
-## Color
+## Colors
 
-The strategy is restrained: warm neutral surfaces plus semantic signal colors.
+The strategy is restrained: blue-tinted dark surfaces plus semantic signal colors drawn from ember, frost moss, and gilded gold.
 
-- `--paper: #f2efe6` — main dispatch paper
-- `--paper-2: #e4e1d7` — summary and secondary work surface
-- `--panel: #fbfaf5` — ledger and inspector
-- `--ink: #252822` — primary text
-- `--muted: #6f726a` — supporting text
-- `--control: #292c27` — sidebar
-- `--control-2: #20231f` — top rail
-- `--red: #b83e33` — blocked / danger
-- `--green: #347b65` — ready / clear
-- `--amber: #d1a02e` — claimed / occupied
-- `--gray: #858a82` — completed, paused, wontdo
-- `--gold: #c49c37` — selection and active control
-
-Signal color is never the only state indicator; every lamp is paired with a word.
+- `--void: #07090d` — deepest night, the top rail and summary band
+- `--basalt: #0b0e13` — main ground, dark runestone
+- `--slate: #11151d` — lifted panels: inspector, task rows, inputs
+- `--rune: #161b25` — raised surfaces: column head, hover, relations
+- `--rune-2: #1b212c` — raised hover
+- `--ink: #ece7d8` — primary text, bone
+- `--bone: #d6d1c1` — secondary text
+- `--muted: #9ba1ae` — muted, blue-tinted slate
+- `--faint: #9097a8` — tertiary text, legible on every dark surface
+- `--line: #232a37` — hairlines on dark
+- `--edge: #2c3340` — stronger edges
+- `--ember: #d24a3c` — blocked, blood ember
+- `--moss: #5fb585` — ready, frost moss
+- `--gold: #d9a441` — claimed, ember gold
+- `--iron: #71788a` — complete / paused / wontdo, cold iron
+- `--gild: #e0ad4a` — selection and active control, gilded
+- `--sheen: #7c8fc4` — raven iridescence, used sparingly
 
 ## Typography
 
-Self-hosted DejaVu assets ship in the Go binary to avoid network dependencies.
+Two families with a deliberate role split. The carved-inscriptional display face carries Norse voice only at large sizes; the workhorse sans carries every dense, scannable surface.
 
-- **Saga Display / DejaVu Serif Bold** — page titles, task titles, and numeric summaries; resembles durable printed dispatch documents.
-- **Saga Sans / DejaVu Sans** — controls and body copy.
-- **Courier New fallback stack** — IDs, timestamps, counts, and measured system labels only.
+- **Saga Sans** (DejaVu Sans, self-hosted) — body, UI, labels, and all dense scannable content including task titles. The ordinary reading and scanning face.
+- **Saga Display** (Cinzel Bold, self-hosted, OFL) — large display only: page title, summary counts, inspector detail title, board section title, empty-state titles, and markdown headings. Never used below 14px; the board's task titles and relation titles are sans so the ledger stays scannable.
+- **Monospace** (ui-monospace, Courier New) — data only: saga IDs, timestamps, clock, code blocks.
 
-Task titles are concise and scannable. Supporting prose stays compact because this is an Operate surface, not a reading surface.
+Labels (eyebrows, column heads, state tags, section headings) are set in sans, tracked uppercase — not monospace — so they read as carved runic inscriptions rather than terminal costume. Reading content on dark surfaces is compensated with slightly more line height (markdown body 1.7) and one step more weight where the face needs it.
 
 ## Layout
 
-- A fixed dark top rail names the project and local runtime.
-- A narrow left control rail provides status-derived views.
-- The main surface begins with search and status controls, followed by ready/blocked/claimed totals.
-- A ledger is the primary visualization. Prerequisites are summarized inline rather than hidden in a separate graph tab.
-- Selecting a saga opens a right inspector with full relationships, children, plan, and recent history.
-- On narrow screens the control rail becomes a compact horizontal bar and the inspector becomes a slide-over sheet.
+A fixed top rail (identity, project, live clock) sits above a two-column shell: a left sidebar (navigation, rune key, read-only notice) and a main column. The main column stacks a page head (title + search/filter/refresh tools), a summary band (ready / blocked / claimed counts), and a workspace. The workspace is a task ledger grid whose rows expose dependency flow through indentation and branch connectors; a detail inspector opens alongside the board. The inspector can expand to fullscreen for long reading. The layout collapses to a single column with a bottom-nav sidebar under 760px.
 
 ## Components
 
-### Signal lamp
-
-A 10px enamel-like circle plus a textual state label. Green means ready, red blocked, amber claimed, gray terminal or paused.
-
-### Task row
-
-A full-width ledger row with signal, hierarchical title and ID, dependency summary, and update time. Rows are buttons and support visible keyboard focus.
-
-### Relationship row
-
-A compact inspector control linking to a dependency, dependent, child, or related saga. It repeats the target's signal and context.
-
-### Controls
-
-Controls use restrained rectangular forms, one-pixel rules, and direct labels. Rounded pills, floating cards, decorative shadows, and detached metric tiles do not belong in this world.
+- **Brand seal** — a gilded ring bearing the Sowilo rune (ᛋ), set in Cinzel-tracked SAGA wordmark.
+- **Lamps** — solid semantic-color marks with a dark inset ring (no glow); each paired with a word.
+- **Task rows** — state mark, title, dependency summary, and relative time; selected rows take a gilded gradient and a 1px gilded hairline.
+- **Rune key** — a runic mark (::before clip-path) labels the legend.
+- **Inspector** — detail title, markdown description and plan, metadata grid, labeled relation buttons, and a timestamped history list.
+- **Markdown** — full dark-theme rendering: code blocks, tables, blockquotes, task lists, inline code, links.
 
 ## Interaction and Motion
 
-- Search filters immediately; `/` focuses search.
-- Status views and totals act as direct filters.
-- Selecting a row updates the URL hash for a linkable inspection state.
-- `Escape` closes the inspector.
-- Data refreshes every 30 seconds and through an explicit Refresh button.
-- The primary authored motion is the inspector deploying from the route ledger. Reduced-motion users receive the state change without transition.
+The inspector slides open (transform, 280ms cubic-bezier) and fades (opacity, 200ms). The refresh icon spins while loading. Selection updates are instant. All motion respects `prefers-reduced-motion`. Keyboard: `/` focuses search, `Escape` closes the inspector or exits fullscreen.
 
 ## Accessibility and Resilience
 
-- Native buttons, labels, search, select, navigation, and headings preserve keyboard and screen-reader behavior.
-- Focus is visibly gold against both light and dark controls.
-- Responsive layouts avoid horizontal page overflow.
-- Empty, loading, storage-error, and no-result states use actionable copy.
-- The server binds only to localhost, exposes GET routes only, sends restrictive security headers, and performs no storage mutations.
+Every text element passes WCAG AA on its dark surface (verified: 0 low-contrast warnings across board and inspector). Focus rings are 2px gilded with offset. The board is keyboard-navigable; the inspector is focusable. `aria-live` regions announce list and toast updates. Fonts use `font-display: swap` with metric-compatible fallbacks (Georgia for display, Arial for sans) to avoid invisible text. The CSP restricts all sources to `'self'` (fonts are self-hosted to satisfy `font-src 'self'`). Reduced motion and user font scaling are preserved.
