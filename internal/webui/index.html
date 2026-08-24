@@ -64,8 +64,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           <div id="emptyState" class="empty" hidden><span class="empty-signal"><i></i><i></i><i></i></span><h2>No routes match</h2><p>Clear the search or choose another section to inspect local work.</p><button type="button" id="clearFilters">Clear filters</button></div>
         </section>
         <aside class="inspector" id="inspector" aria-label="Saga details">
-          <header><span id="inspectorState"><i class="lamp complete"></i>SELECT A SAGA</span><button id="closeInspector" type="button" aria-label="Close details">×</button></header>
-          <div id="inspectorBody" class="inspector-body"><div class="inspector-empty"><svg viewBox="0 0 80 80"><path d="M9 40h21l10-18 10 36 10-18h11"/><circle cx="9" cy="40" r="4"/><circle cx="71" cy="40" r="4"/></svg><h2>Inspect a route</h2><p>Select any saga to trace its dependencies, children, and recent history.</p></div></div>
+          <header><span id="inspectorState"><i class="lamp complete"></i>SELECT A SAGA</span><div class="inspector-actions"><button id="expandInspector" type="button" aria-label="View saga fullscreen" aria-pressed="false" title="View saga fullscreen"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8V3h5M12 3h5v5M17 12v5h-5M8 17H3v-5"/></svg></button><button id="closeInspector" type="button" aria-label="Close details" title="Close details">×</button></div></header>
+          <div id="inspectorBody" class="inspector-body" tabindex="-1"><div class="inspector-empty"><svg viewBox="0 0 80 80"><path d="M9 40h21l10-18 10 36 10-18h11"/><circle cx="9" cy="40" r="4"/><circle cx="71" cy="40" r="4"/></svg><h2>Inspect a route</h2><p>Select any saga to trace its dependencies, children, and recent history.</p></div></div>
         </aside>
       </div>
     </main>
