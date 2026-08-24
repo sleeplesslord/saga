@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ func TestHandlerServesEmbeddedAppAndAPI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := st.Save(&saga.Saga{ID: "abc123", Title: "Test route", Status: saga.StatusActive, Priority: saga.PriorityHigh, CreatedAt: time.Now(), UpdatedAt: time.Now()}, store.ScopeGlobal); err != nil {
+	if err := st.Save(&saga.Saga{ID: "abc123", Title: "Test route", Description: "Use **Markdown** safely.", Plan: "# Steps\n\n1. Render it", Status: saga.StatusActive, Priority: saga.PriorityHigh, CreatedAt: time.Now(), UpdatedAt: time.Now()}, store.ScopeGlobal); err != nil {
 		t.Fatal(err)
 	}
 	handler, err := Handler(st, Options{ProjectName: "test-project", Scope: store.ScopeGlobal})
@@ -64,6 +65,15 @@ func TestHandlerServesEmbeddedAppAndAPI(t *testing.T) {
 	handler.ServeHTTP(index, httptest.NewRequest(http.MethodGet, "/", nil))
 	if index.Code != http.StatusOK || index.Header().Get("Content-Security-Policy") == "" {
 		t.Fatalf("index response status=%d headers=%v", index.Code, index.Header())
+	}
+	if !strings.Contains(index.Body.String(), `<script src="/assets/markdown.js"></script>`) {
+		t.Fatal("index does not load the dependency-free Markdown renderer")
+	}
+
+	markdown := httptest.NewRecorder()
+	handler.ServeHTTP(markdown, httptest.NewRequest(http.MethodGet, "/assets/markdown.js", nil))
+	if markdown.Code != http.StatusOK || !strings.Contains(markdown.Body.String(), "SagaMarkdown") {
+		t.Fatalf("Markdown asset status=%d body=%q", markdown.Code, markdown.Body.String())
 	}
 
 	api := httptest.NewRecorder()
@@ -77,6 +87,9 @@ func TestHandlerServesEmbeddedAppAndAPI(t *testing.T) {
 	}
 	if response.Total != 1 || len(response.Sagas) != 1 || response.Sagas[0].ID != "abc123" {
 		t.Fatalf("unexpected API response: %#v", response)
+	}
+	if response.Sagas[0].Description != "Use **Markdown** safely." || !strings.HasPrefix(response.Sagas[0].Plan, "# Steps") {
+		t.Fatalf("Markdown source was not preserved in API response: %#v", response.Sagas[0])
 	}
 
 	post := httptest.NewRecorder()

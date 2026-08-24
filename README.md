@@ -33,6 +33,7 @@ saga new "Handle edge cases" --parent <id>
 saga ready
 
 # Open the read-only project dashboard
+# Descriptions and plans render as Markdown in the inspector
 saga web
 
 # Claim and work
