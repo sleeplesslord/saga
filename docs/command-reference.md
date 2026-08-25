@@ -114,6 +114,17 @@ saga web [--address 127.0.0.1:7331] [--no-open] [--global]
 
 The server only accepts localhost bindings. Data refreshes automatically; task changes remain CLI-only.
 
+### Store scope
+
+Which sagas a command sees depends on the working directory: with a `.saga/` in the current directory or an ancestor, that project store is the default scope; otherwise the global store is.
+
+Because scope is implicit, commands say which store they used:
+
+- `saga list` and `saga search` print the store directory above their results.
+- Lookups that miss name every store they searched: `saga not found: abc123 (searched global ~/.saga/sagas.jsonl, project /path/to/repo/.saga/sagas.jsonl)`.
+
+An ID that "isn't found" often just belongs to a different project store — check the named paths before concluding the saga is gone.
+
 ## Modifying Sagas
 
 ### `saga edit`

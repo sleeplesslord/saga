@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"github.com/sleeplesslord/saga/internal/saga"
@@ -54,6 +55,15 @@ Examples:
 			scopes = []store.Scope{store.ScopeLocal}
 		} else {
 			scopes = []store.Scope{store.ScopeGlobal}
+		}
+
+		// Name the store being searched. The default scope follows the working
+		// directory, so "no results" is often a scope surprise rather than a
+		// missing saga — `saga list` prints the same kind of header.
+		if st.HasLocal() {
+			fmt.Printf("(Searching project sagas from %s)\n\n", filepath.Dir(st.LocalPath()))
+		} else {
+			fmt.Printf("(Searching global sagas from %s)\n\n", filepath.Dir(st.GlobalPath()))
 		}
 
 		sagas, err := st.LoadAll(scopes...)
