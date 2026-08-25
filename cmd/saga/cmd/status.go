@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/sleeplesslord/saga/internal/saga"
@@ -20,12 +21,24 @@ var statusCmd = &cobra.Command{
 			return fmt.Errorf("initializing store: %w", err)
 		}
 
+		archived := false
 		sg, err := st.GetByID(id)
+		if errors.Is(err, store.ErrNotFound) {
+			// The active store forgets archived sagas, but the ID stays valid —
+			// fall back to the archive instead of reporting it as unknown.
+			if fromArchive, archiveErr := st.GetArchivedByID(id); archiveErr == nil {
+				sg, err, archived = fromArchive, nil, true
+			}
+		}
 		if err != nil {
 			return err
 		}
 
-		fmt.Printf("Saga: %s (%s)\n", sg.ID, sg.Status)
+		if archived {
+			fmt.Printf("Saga: %s (%s) [archived]\n", sg.ID, sg.Status)
+		} else {
+			fmt.Printf("Saga: %s (%s)\n", sg.ID, sg.Status)
+		}
 		printField("Title:", sg.Title, 0)
 		if sg.Description != "" {
 			printField("Description:", formatDescription(sg.Description), 0)

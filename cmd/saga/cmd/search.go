@@ -13,6 +13,7 @@ var (
 	searchLabels   []string
 	searchStatus   string
 	searchPriority string
+	searchArchived bool
 )
 
 // searchWidths returns column widths for the search table (no CLAIM column, compact format),
@@ -35,7 +36,8 @@ Examples:
   sg search "" --label bug            # All sagas with bug label
   sg search "" --status active        # All active sagas
   sg search "" --priority high        # All high priority sagas
-  sg search "fix" --label urgent      # Search with label filter`,
+  sg search "fix" --label urgent      # Search with label filter
+  sg search "auth" --archived         # Search the archive instead`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		query := ""
@@ -56,7 +58,12 @@ Examples:
 			scopes = []store.Scope{store.ScopeGlobal}
 		}
 
-		sagas, err := st.LoadAll(scopes...)
+		var sagas []*saga.Saga
+		if searchArchived {
+			sagas, err = st.LoadArchived(scopes...)
+		} else {
+			sagas, err = st.LoadAll(scopes...)
+		}
 		if err != nil {
 			return fmt.Errorf("loading sagas: %w", err)
 		}
@@ -101,11 +108,19 @@ Examples:
 		}
 
 		if len(matches) == 0 {
+			if searchArchived {
+				fmt.Println("No archived sagas found matching your search.")
+				return nil
+			}
 			fmt.Println("No sagas found matching your search.")
 			return nil
 		}
 
-		fmt.Printf("Found %d saga(s):\n\n", len(matches))
+		if searchArchived {
+			fmt.Printf("Found %d archived saga(s):\n\n", len(matches))
+		} else {
+			fmt.Printf("Found %d saga(s):\n\n", len(matches))
+		}
 
 		// Print table header
 		printTableHeader(
@@ -146,5 +161,6 @@ func init() {
 	searchCmd.Flags().StringArrayVar(&searchLabels, "label", nil, "Filter by label (can specify multiple)")
 	searchCmd.Flags().StringVar(&searchStatus, "status", "", "Filter by status (active, paused, done, wontdo)")
 	searchCmd.Flags().StringVar(&searchPriority, "priority", "", "Filter by priority (high, normal, low)")
+	searchCmd.Flags().BoolVar(&searchArchived, "archived", false, "Search the archive instead of the active store")
 	rootCmd.AddCommand(searchCmd)
 }

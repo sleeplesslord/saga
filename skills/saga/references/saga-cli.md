@@ -61,11 +61,14 @@ saga list --priority low
 saga list --mine                     # Your claimed sagas (same ppid session)
 saga list --unclaimed                # Unclaimed only
 saga list --label bug                # Filter by label
+saga list --archived                 # Read the archive instead (implies --all)
 ```
 
 **Sorting:** By deadline (soonest first), then priority (high → normal → low), then updated time.
 
 **Output:** Shows claim expiry time in listings when a saga is claimed.
+
+**`--archived`:** Reads `archive.jsonl` instead of the active store. Sagas moved out by `saga archive` are invisible to every other listing, so this is how to see them.
 
 ### ready
 
@@ -92,6 +95,8 @@ saga status abc123
 ```
 
 Shows: ID, title, description, status, priority, labels, parent/children counts, claim info, recent history.
+
+If the ID isn't in the active store, `status` looks in the archive and marks the header `[archived]`.
 
 ### context ⭐
 
@@ -306,7 +311,23 @@ saga search "" --priority high        # All high priority
 
 # Combined
 saga search "fix" --label urgent --status active
+
+# Archive
+saga search "auth" --archived         # Search the archive instead
 ```
+
+### archive
+
+Move terminal sagas (done/wontdo) that haven't changed in `--days` (default 30) out of the active store.
+
+```bash
+saga archive                          # Archive stale terminal sagas
+saga archive --days 180               # Older threshold
+saga archive --dry-run                # Preview only
+saga archive --global                 # Include global sagas
+```
+
+Archiving is a **storage move, not a status change**: records go from `sagas.jsonl` to `archive.jsonl`, plan files from `plans/` to `archive/plans/`. Archived sagas disappear from `list`, `ready`, and `search`; reach them with `saga list --archived`, `saga search <query> --archived`, or `saga status <id>` (which falls back to the archive).
 
 ## Status Values
 
@@ -326,6 +347,7 @@ saga search "fix" --label urgent --status active
 
 - Global: `~/.saga/sagas.jsonl`
 - Local: `./.saga/sagas.jsonl` (if `saga init` run)
+- Archive: `<store dir>/archive.jsonl` + `<store dir>/archive/plans/`
 - Local config: `./.saga/config.json`
 - Global config: `~/.saga/config.json`
 

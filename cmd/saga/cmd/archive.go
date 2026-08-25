@@ -24,6 +24,11 @@ modified in the specified number of days to a separate archive file.
 Archived sagas are moved from sagas.jsonl to archive.jsonl in the same
 .saga/ directory. Plan files for archived sagas are also moved.
 
+Archiving takes a saga out of the active store, so it stops showing up in
+list, ready, and search. Read the archive with 'saga list --archived',
+'saga search <query> --archived', or 'saga status <id>' (which falls back
+to the archive when the active store has no such ID).
+
 When a local .saga/ exists, only local sagas are archived by default.
 Use --global to also archive global sagas, or --global --local for both.
 
@@ -84,6 +89,7 @@ Examples:
 				fmt.Printf("No sagas older than %d days to archive.\n", archiveDays)
 			} else {
 				fmt.Printf("Archived %d saga(s) older than %d days.\n", totalArchived, archiveDays)
+				fmt.Println("They no longer appear in list/search — read them with: saga list --archived")
 			}
 		}
 
