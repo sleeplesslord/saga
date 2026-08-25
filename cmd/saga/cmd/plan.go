@@ -120,7 +120,7 @@ Examples:
 			}
 			newPlan = string(data)
 		case hasArgs:
-			newPlan = strings.Join(args[1:], " ")
+			newPlan = unescapeNewlines(strings.Join(args[1:], " "))
 		default:
 			newPlan = stdinData
 		}

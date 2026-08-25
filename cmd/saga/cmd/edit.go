@@ -68,12 +68,12 @@ Examples:
 				sg.AddHistory("edited", "Updated title")
 			}
 			if descChanged {
-				sg.Description = editDesc // empty string clears description
+				sg.Description = unescapeNewlines(editDesc) // empty string clears description
 				sg.UpdatedAt = time.Now()
 				sg.AddHistory("edited", "Updated description")
 			}
 			if planChanged {
-				sg.Plan = editPlan // empty string clears plan
+				sg.Plan = unescapeNewlines(editPlan) // empty string clears plan
 				sg.UpdatedAt = time.Now()
 				sg.AddHistory("edited", "Updated plan")
 			}

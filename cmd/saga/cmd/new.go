@@ -88,12 +88,12 @@ Examples:
 
 		// Set description if specified
 		if description != "" {
-			sg.Description = description
+			sg.Description = unescapeNewlines(description)
 		}
 
 		// Set plan if specified
 		if plan != "" {
-			sg.Plan = plan
+			sg.Plan = unescapeNewlines(plan)
 		}
 
 		// Set deadline if specified

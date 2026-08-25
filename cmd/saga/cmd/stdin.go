@@ -193,3 +193,13 @@ func fcntlSetFlags(fd, flags int) error {
 	}
 	return nil
 }
+
+// unescapeNewlines converts the literal two-character sequence backslash-n
+// into actual newline characters. When a description or plan is passed via a
+// CLI flag (e.g. --desc "Line 1\nLine 2"), the shell delivers \n as two
+// literal characters rather than a newline. Without this conversion the
+// stored value contains the literal text "\n" which renders incorrectly in
+// both the CLI and the web UI.
+func unescapeNewlines(s string) string {
+	return strings.ReplaceAll(s, `\n`, "\n")
+}

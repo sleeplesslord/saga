@@ -3,7 +3,8 @@ const $=selector=>document.querySelector(selector);
 const $$=selector=>[...document.querySelectorAll(selector)];
 const escapeHTML=value=>String(value??'').replace(/[&<>'"]/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
 const renderMarkdown=value=>globalThis.SagaMarkdown.render(value);
-const markdownDocument=(value,empty)=>value?.trim()?`<div class="markdown-body">${renderMarkdown(value)}</div>`:`<p class="detail-empty">${escapeHTML(empty)}</p>`;
+const unescapeNewlines=value=>value.replace(/\\n/g,'\n');
+const markdownDocument=(value,empty)=>value?.trim()?`<div class="markdown-body">${renderMarkdown(unescapeNewlines(value))}</div>`:`<p class="detail-empty">${escapeHTML(empty)}</p>`;
 const formatRelative=value=>{const seconds=Math.max(0,(Date.now()-new Date(value).getTime())/1000);if(seconds<60)return 'just now';if(seconds<3600)return `${Math.floor(seconds/60)}m ago`;if(seconds<86400)return `${Math.floor(seconds/3600)}h ago`;if(seconds<604800)return `${Math.floor(seconds/86400)}d ago`;return new Date(value).toLocaleDateString()};
 const taskByID=id=>state.snapshot?.sagas.find(task=>task.id===id);
 function signal(task){if(task.status==='paused')return ['paused','PAUSED'];if(task.status==='done')return ['complete','DONE'];if(task.status==='wontdo')return ['wontdo','WONTDO'];if(task.blocked)return ['blocked','BLOCKED'];if(task.claimed)return ['claimed','CLAIMED'];return ['ready','READY']}
