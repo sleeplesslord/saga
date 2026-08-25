@@ -37,7 +37,11 @@ saga list --priority high|normal|low
 saga list --mine                     # Your claimed sagas
 saga list --unclaimed                # Unclaimed only
 saga search "query"                  # Search titles/IDs/descriptions
-saga status <id>                     # Brief status
+saga status <id>                     # Brief status (falls back to the archive)
+
+# Archived work (moved out of the active store by `saga archive`)
+saga list --archived                 # Browse the archive
+saga search "query" --archived       # Search the archive
 
 # Ready queue (ready-to-work)
 saga ready                           # Unclaimed, unblocked, no active children

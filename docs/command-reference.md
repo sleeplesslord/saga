@@ -49,6 +49,7 @@ saga list [flags]
 | `--label <label>` | Filter by label |
 | `--mine` | Show only your claimed sagas |
 | `--unclaimed` | Show only unclaimed sagas |
+| `--archived` | Read the archive instead of the active store (implies `--all`) |
 
 When a local `.saga/` exists, `saga list` shows local sagas by default. Use `--global` to include global. Without a local store, shows global by default.
 
@@ -59,6 +60,8 @@ Show brief details and history for a saga.
 ```bash
 saga status <id>
 ```
+
+If the active store has no such ID, `saga status` falls back to the archive and marks the result `[archived]`.
 
 ### `saga context`
 
@@ -87,6 +90,7 @@ saga search <query> [flags]
 | `--label <label>` | Filter by label (repeatable) |
 | `--status <status>` | Filter: `active`, `paused`, `done`, `wontdo` |
 | `--priority <level>` | Filter: `high`, `normal`, `low` |
+| `--archived` | Search the archive instead of the active store |
 
 ### `saga ready`
 
@@ -216,6 +220,33 @@ saga reopen <id> [--reason <text>]
 | `--reason <text>` | Reason logged in history |
 
 Only `done` sagas can be reopened. Sets status back to `active`.
+
+## Archiving
+
+### `saga archive`
+
+Move terminal sagas (`done` or `wontdo`) that haven't changed in a while out of the active store.
+
+```bash
+saga archive [flags]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--days <n>` | Archive sagas not modified in this many days (default: 30) |
+| `--dry-run` | Preview what would be archived without writing |
+| `-l`, `--local` | Archive only project sagas |
+| `-g`, `--global` | Include global sagas (project-only by default when a local store exists) |
+
+Archiving is a storage move, not a status: records go from `sagas.jsonl` to `archive.jsonl`, and their plan files from `plans/` to `archive/plans/`. Status stays `done`/`wontdo`.
+
+Because the record leaves the active store, it stops appearing in `saga list`, `saga ready`, and `saga search`. Read archived work with:
+
+```bash
+saga list --archived              # browse the archive
+saga search <query> --archived    # search the archive
+saga status <id>                  # falls back to the archive, marked [archived]
+```
 
 ## Status Transitions
 

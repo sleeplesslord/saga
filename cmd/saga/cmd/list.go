@@ -21,6 +21,7 @@ var (
 	statusFilter  string
 	priorityFilter string
 	mineFilter    bool
+	listArchived  bool
 )
 
 // listWidths returns column widths for the list table, using the
@@ -35,7 +36,10 @@ var listCmd = &cobra.Command{
 	Aliases: []string{"ls"},
 	Short:   "List sagas",
 	Long: `List sagas. When a local .saga/ exists, shows local sagas by default.
-Use --global to include global sagas. Use flags to filter by scope, status, label, or priority.`,
+Use --global to include global sagas. Use flags to filter by scope, status, label, or priority.
+
+Use --archived to read the archive instead of the active store. Archived sagas
+are all done or wontdo, so --archived implies --all.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		st, err := store.New(store.DefaultPath())
 		if err != nil {
@@ -60,12 +64,24 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			}
 		}
 
-		sagas, err := st.LoadAll(scopes...)
+		var sagas []*saga.Saga
+		if listArchived {
+			// Archived sagas are all terminal, so an active-only view would
+			// always come back empty.
+			showAll = true
+			sagas, err = st.LoadArchived(scopes...)
+		} else {
+			sagas, err = st.LoadAll(scopes...)
+		}
 		if err != nil {
 			return fmt.Errorf("loading sagas: %w", err)
 		}
 
 		if len(sagas) == 0 {
+			if listArchived {
+				fmt.Println("No archived sagas found.")
+				return nil
+			}
 			fmt.Println("No sagas found.")
 			return nil
 		}
@@ -82,6 +98,9 @@ Use --global to include global sagas. Use flags to filter by scope, status, labe
 			scopeDesc = "global + project"
 		} else if scopes[0] == store.ScopeLocal {
 			scopeDesc = "project"
+		}
+		if listArchived {
+			scopeDesc = "archived " + scopeDesc
 		}
 		fmt.Printf("(Showing %s sagas", scopeDesc)
 		if st.HasLocal() {
@@ -246,5 +265,6 @@ func init() {
 	listCmd.Flags().StringVar(&statusFilter, "status", "", "Filter by status (active, paused, done, wontdo)")
 	listCmd.Flags().StringVar(&priorityFilter, "priority", "", "Filter by priority (high, normal, low)")
 	listCmd.Flags().BoolVar(&mineFilter, "mine", false, "Show only sagas claimed by me")
+	listCmd.Flags().BoolVar(&listArchived, "archived", false, "Read the archive instead of the active store (implies --all)")
 	rootCmd.AddCommand(listCmd)
 }

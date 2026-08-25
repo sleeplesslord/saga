@@ -352,8 +352,9 @@ func dedupeByID(sagas []*saga.Saga) []*saga.Saga {
 	return result
 }
 
-// loadFromPath loads sagas from a specific file path
-func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
+// scanJSONL reads one saga per line from a JSONL file. A missing file is not
+// an error — it just holds no sagas yet.
+func scanJSONL(path string) ([]*saga.Saga, error) {
 	file, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -375,10 +376,20 @@ func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
 		sagas = append(sagas, &sg)
 	}
 
+	return sagas, scanner.Err()
+}
+
+// loadFromPath loads sagas from a specific file path
+func (s *Store) loadFromPath(path string) ([]*saga.Saga, error) {
+	sagas, err := scanJSONL(path)
+	if err != nil {
+		return nil, err
+	}
+
 	// Load plan files — they override any Plan from JSONL (backward compat)
 	loadPlanFiles(filepath.Dir(path), sagas)
 
-	return sagas, scanner.Err()
+	return sagas, nil
 }
 
 // Save appends a saga to storage (default: local if in project, else global).
@@ -1032,6 +1043,75 @@ func (s *Store) archiveUnlocked(path string, cutoff time.Time, dryRun bool) (int
 	}
 
 	return len(toArchive), nil
+}
+
+// LoadArchived reads archived sagas from the given scopes. Archiving moves a
+// record out of the active JSONL, so no other read path can see it — this is
+// how an archived saga is found again.
+func (s *Store) LoadArchived(scopes ...Scope) ([]*saga.Saga, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(scopes) == 0 {
+		scopes = []Scope{ScopeGlobal}
+		if s.HasLocal() {
+			scopes = append(scopes, ScopeLocal)
+		}
+	}
+
+	var allSagas []*saga.Saga
+
+	for _, scope := range scopes {
+		var path string
+		switch scope {
+		case ScopeGlobal:
+			path = s.globalPath
+		case ScopeLocal:
+			path = s.localPath
+		}
+
+		if path == "" {
+			continue
+		}
+
+		sagas, err := s.loadArchivedFromPath(path)
+		if err != nil {
+			return nil, fmt.Errorf("loading archive for %v: %w", scope, err)
+		}
+		allSagas = append(allSagas, sagas...)
+	}
+
+	return dedupeByID(allSagas), nil
+}
+
+// loadArchivedFromPath reads one scope's archive.jsonl. Archiving also moved
+// the plan files, so they are read from archive/plans/ rather than plans/.
+func (s *Store) loadArchivedFromPath(path string) ([]*saga.Saga, error) {
+	sagas, err := scanJSONL(archivePath(path))
+	if err != nil {
+		return nil, err
+	}
+
+	loadPlanFiles(filepath.Join(filepath.Dir(path), "archive"), sagas)
+
+	return sagas, nil
+}
+
+// GetArchivedByID finds an archived saga by ID across all scopes.
+// Returns ErrNotFound if no archive holds it.
+func (s *Store) GetArchivedByID(id string) (*saga.Saga, error) {
+	sagas, err := s.LoadArchived()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, sg := range sagas {
+		if sg.ID == id {
+			return sg, nil
+		}
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
 }
 
 // GetActiveSagasWithParent returns all sagas matching a parent that are active
