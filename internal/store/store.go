@@ -259,6 +259,27 @@ func (s *Store) HasLocal() bool {
 	return s.localPath != ""
 }
 
+// GlobalPath returns the global store path
+func (s *Store) GlobalPath() string {
+	return s.globalPath
+}
+
+// searchedStores names the store files a lookup consulted. Which stores are in
+// play depends on the working directory, so an ID that is "not found" here may
+// simply live in another project's .saga — say where we looked.
+func (s *Store) searchedStores() string {
+	paths := []string{"global " + s.globalPath}
+	if s.localPath != "" {
+		paths = append(paths, "project "+s.localPath)
+	}
+	return strings.Join(paths, ", ")
+}
+
+// notFound builds the ErrNotFound error users see, naming the stores searched.
+func (s *Store) notFound(id string) error {
+	return fmt.Errorf("%w: %s (searched %s)", ErrNotFound, id, s.searchedStores())
+}
+
 // LocalPath returns the local store path (empty if none)
 func (s *Store) LocalPath() string {
 	return s.localPath
@@ -583,7 +604,7 @@ func (s *Store) Update(updated *saga.Saga) error {
 	if deferred != nil {
 		return deferred
 	}
-	return fmt.Errorf("%w: %s", ErrNotFound, updated.ID)
+	return s.notFound(updated.ID)
 }
 
 // Mutate applies fn to the freshest copy of a saga and persists it, holding the
@@ -672,7 +693,7 @@ func (s *Store) Mutate(id string, fn func(*saga.Saga) error) (*saga.Saga, error)
 	if deferred != nil {
 		return nil, deferred
 	}
-	return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
+	return nil, s.notFound(id)
 }
 
 // loadFromPathUnlocked loads sagas without locking (caller must hold lock)
@@ -781,7 +802,7 @@ func (s *Store) GetByID(id string) (*saga.Saga, error) {
 		return sg, nil
 	}
 
-	return nil, fmt.Errorf("%w: %s", ErrNotFound, id)
+	return nil, s.notFound(id)
 }
 
 // GetChildren returns all direct children of a saga (uses index)
