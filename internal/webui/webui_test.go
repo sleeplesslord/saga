@@ -99,6 +99,26 @@ func TestHandlerServesEmbeddedAppAndAPI(t *testing.T) {
 	}
 }
 
+func TestAppAssetSyncsNavigationWithHistory(t *testing.T) {
+	app, err := files.ReadFile("assets/app.js")
+	if err != nil {
+		t.Fatalf("reading embedded app.js: %v", err)
+	}
+	script := string(app)
+	// Selecting a saga pushes its hash, so browser back/forward change the URL.
+	// The app must also listen for hashchange and re-render from the URL,
+	// otherwise the address bar and the displayed saga drift apart.
+	for _, fragment := range []string{
+		"addEventListener('hashchange',syncFromHash)",
+		"function syncFromHash()",
+		"location.hash=encodeURIComponent(id)",
+	} {
+		if !strings.Contains(script, fragment) {
+			t.Fatalf("app.js is missing history-navigation wiring %q", fragment)
+		}
+	}
+}
+
 func TestListenAddressRejectsPublicBindings(t *testing.T) {
 	tests := []struct {
 		input string
